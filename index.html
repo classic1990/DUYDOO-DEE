@@ -30,6 +30,9 @@
             </div>
             
             <div class="flex items-center gap-4">
+                <button id="themeToggleBtn" onclick="toggleTheme()" class="w-9 h-9 rounded-full bg-slate-800/50 hover:bg-slate-700 text-yellow-400 transition flex items-center justify-center border border-slate-700">
+                    <i class="fa-solid fa-sun"></i>
+                </button>
                 <div class="relative hidden sm:block group">
                     <input type="text" id="searchInput" onkeyup="searchMovies()" placeholder="ค้นหาซีรีส์..." 
                         class="bg-slate-800/50 border border-slate-700 rounded-full py-1.5 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 w-48 transition-all group-hover:w-64 text-slate-200">
@@ -39,7 +42,7 @@
                 <button onclick="switchView('admin')" class="hidden text-slate-400 hover:text-white text-sm bg-slate-800/50 p-2 rounded-full transition" title="จัดการหลังบ้าน">
                     <i class="fa-solid fa-gear"></i>
                 </button>
-                <button id="loginButton" onclick="openLoginModal()" class="bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 px-5 py-1.5 rounded-full text-sm font-semibold shadow-lg shadow-sky-900/50 transition transform hover:-translate-y-0.5">
+                <button id="loginButton" onclick="window.location.href='login.html'" class="bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 px-5 py-1.5 rounded-full text-sm font-semibold shadow-lg shadow-sky-900/50 transition transform hover:-translate-y-0.5">
                     เข้าสู่ระบบ
                 </button>
                 <div id="loggedInUser" class="hidden items-center gap-3">
@@ -75,13 +78,13 @@
                 <div>
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">หมวดหมู่</h3>
                     <div class="space-y-1">
-                        <a href="#" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
+                        <a href="#" onclick="filterCategory('china')" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
                             <span><i class="fa-solid fa-earth-asia mr-2 w-5"></i> จีน (China)</span>
                         </a>
-                        <a href="#" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
+                        <a href="#" onclick="filterCategory('inter')" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
                             <span><i class="fa-solid fa-earth-americas mr-2 w-5"></i> ฝรั่ง (Inter)</span>
                         </a>
-                        <a href="#" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
+                        <a href="#" onclick="filterCategory('anime')" class="flex items-center justify-between px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm">
                             <span><i class="fa-solid fa-film mr-2 w-5"></i> อนิเมะ (Anime)</span>
                         </a>
                     </div>
@@ -96,7 +99,7 @@
             <div id="homeView" class="animate-fade-in">
                 <!-- Hero Slider -->
                 <div class="relative h-[250px] md:h-[350px] rounded-3xl overflow-hidden mb-10 group shadow-2xl shadow-sky-900/20 border border-slate-800">
-                    <img src="https://image.tmdb.org/t/p/original/pi6l9j3gWb04fX07XjT4z554qGf.jpg" alt="Hero banner for Joy of Life 2" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
+                    <img src="https://image.tmdb.org/t/p/w1280/pi6l9j3gWb04fX07XjT4z554qGf.jpg" alt="Hero banner for Joy of Life 2" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700">
                     <div class="absolute inset-0 bg-gradient-to-t from-[#0f172a] via-[#0f172a]/40 to-transparent"></div>
                     <div class="absolute bottom-0 left-0 p-6 md:p-10">
                         <span class="bg-sky-600 text-white text-[10px] font-bold px-2 py-1 rounded mb-2 inline-block shadow-lg">UPDATE 2024</span>
@@ -203,10 +206,23 @@
                         <button onclick="switchView('home')" class="px-4 py-2 bg-slate-800 rounded-lg text-slate-300 hover:bg-slate-700 text-sm border border-slate-700 transition">
                             <i class="fa-solid fa-arrow-left mr-2"></i> ไปหน้าเว็บ
                         </button>
+                        <button onclick="exportMoviesToJSON()" class="px-4 py-2 bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg text-sm border border-emerald-600/50 transition">
+                            <i class="fa-solid fa-file-export mr-2"></i> Export JSON
+                        </button>
+                        <button id="btnImportJSON" onclick="triggerImport()" class="px-4 py-2 bg-amber-600/20 text-amber-400 hover:bg-amber-600 hover:text-white rounded-lg text-sm border border-amber-600/50 transition">
+                            <i class="fa-solid fa-file-import mr-2"></i> Import JSON
+                        </button>
+                        <input type="file" id="importFile" accept=".json" class="hidden" onchange="importMoviesFromJSON(event)">
                         <button onclick="openModal()" class="px-5 py-2 bg-gradient-to-r from-sky-600 to-blue-600 rounded-lg text-white hover:from-sky-500 hover:to-blue-500 text-sm font-bold shadow-lg shadow-sky-900/50 transition transform hover:scale-105">
                             <i class="fa-solid fa-plus mr-1"></i> เพิ่มหนังใหม่
                         </button>
                     </div>
+                </div>
+
+                <!-- Admin Search Bar -->
+                <div class="mb-6 relative">
+                    <input type="text" id="adminSearchInput" onkeyup="searchAdminMovies()" placeholder="ค้นหาหนังในระบบ (ชื่อ, ปี, ID)..." class="w-full glass-input rounded-xl px-4 py-3 pl-10 text-white focus:ring-2 focus:ring-sky-500 outline-none transition shadow-lg shadow-black/20">
+                    <span class="absolute left-3 top-3.5 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></span>
                 </div>
 
                 <!-- Stats Cards -->
@@ -269,8 +285,8 @@
                             <thead class="bg-slate-800/80 text-slate-200 uppercase font-bold text-xs">
                                 <tr>
                                     <th class="px-6 py-4">โปสเตอร์</th>
-                                    <th class="px-6 py-4">ชื่อเรื่อง</th>
-                                    <th class="px-6 py-4">รายละเอียด</th>
+                                    <th class="px-6 py-4 cursor-pointer hover:text-sky-400 select-none transition" onclick="sortMovies('title')">ชื่อเรื่อง <i id="sort-title" class="fa-solid fa-sort ml-1 text-slate-600"></i></th>
+                                    <th class="px-6 py-4 cursor-pointer hover:text-sky-400 select-none transition" onclick="sortMovies('year')">รายละเอียด (ปี) <i id="sort-year" class="fa-solid fa-sort ml-1 text-slate-600"></i></th>
                                     <th class="px-6 py-4">ลิงก์วิดีโอ (ID)</th>
                                     <th class="px-6 py-4 text-right">จัดการ</th>
                                 </tr>
@@ -279,6 +295,9 @@
                                 <!-- JS Injected -->
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Pagination Controls -->
+                    <div id="adminPagination" class="px-6 py-4 border-t border-slate-800/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/20">
                     </div>
                 </div>
             </div>
@@ -357,6 +376,15 @@
                     </div>
 
                     <div>
+                        <label for="inpCategory" class="block text-xs font-bold text-slate-400 mb-1">หมวดหมู่</label>
+                        <select id="inpCategory" class="w-full glass-input rounded-lg px-4 py-2 text-white outline-none">
+                            <option value="china" class="text-black">จีน (China)</option>
+                            <option value="inter" class="text-black">ฝรั่ง (Inter)</option>
+                            <option value="anime" class="text-black">อนิเมะ (Anime)</option>
+                        </select>
+                    </div>
+
+                    <div>
                         <label for="inpEp" class="block text-xs font-bold text-slate-400 mb-1">จำนวนตอน</label>
                         <input type="number" id="inpEp" value="1" class="w-full glass-input rounded-lg px-4 py-2 text-white outline-none">
                     </div>
@@ -407,6 +435,9 @@
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
     <footer class="mt-auto border-t border-slate-800 py-8 bg-[#0b1120]">
         <div class="container mx-auto px-4 text-center">
             <p class="text-slate-500 text-sm">© 2026 DUYDODEE 4K - ดูซีรีส์ออนไลน์คุณภาพสูง</p>
@@ -414,6 +445,114 @@
     </footer>
 
     <!-- JAVASCRIPT LOGIC -->
-    <script src="d:/DUYDO-DEE/Backend/main.js"></script>
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let allMovies = [];
+
+        // ทำงานเมื่อโหลดหน้าเว็บเสร็จ
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMovies();
+            checkLogin();
+        });
+
+        // 1. ฟังก์ชันดึงข้อมูลหนังจาก Backend
+        async function loadMovies() {
+            try {
+                const res = await fetch(`${API_URL}/movies`);
+                const json = await res.json();
+                if (json.success) {
+                    allMovies = json.data;
+                    renderMovies(allMovies);
+                }
+            } catch (err) {
+                console.error("Failed to load movies", err);
+                document.getElementById('movieGrid').innerHTML = '<div class="col-span-full text-center text-red-400">ไม่สามารถเชื่อมต่อ Server ได้</div>';
+            }
+        }
+
+        // 2. ฟังก์ชันแสดงผลหนัง (Render)
+        function renderMovies(movies) {
+            const grid = document.getElementById('movieGrid');
+            if (!movies.length) {
+                grid.innerHTML = '<div class="col-span-full text-center text-slate-500 py-10">ไม่พบข้อมูลหนัง</div>';
+                return;
+            }
+            
+            grid.innerHTML = movies.map(m => `
+                <div class="group relative bg-slate-800 rounded-xl overflow-hidden shadow-lg hover:shadow-sky-500/20 transition duration-300 cursor-pointer border border-slate-700" 
+                     onclick="openPlayer('${m.ytId}', '${escapeHtml(m.title)}', '${escapeHtml(m.description || '')}')">
+                    <div class="aspect-[2/3] overflow-hidden relative">
+                        <img src="${m.posterUrl}" alt="${m.title}" class="w-full h-full object-cover transform group-hover:scale-110 transition duration-500">
+                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <i class="fa-solid fa-play-circle text-5xl text-white drop-shadow-lg transform scale-50 group-hover:scale-100 transition duration-300"></i>
+                        </div>
+                        <div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-yellow-400 text-xs font-bold px-2 py-1 rounded flex items-center gap-1">
+                            <i class="fa-solid fa-star"></i> ${m.rating}
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <h3 class="text-white font-bold truncate group-hover:text-sky-400 transition text-sm">${m.title}</h3>
+                        <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                            <span>${m.year}</span>
+                            <span class="border border-slate-600 px-1.5 py-0.5 rounded text-[10px] uppercase bg-slate-700">${m.category}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Helper: ป้องกันตัวอักษรพิเศษทำโค้ดพัง
+        function escapeHtml(text) {
+            return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;").replace(/\n/g, ' ');
+        }
+
+        // 3. ฟังก์ชันเปิด Player
+        function openPlayer(ytId, title, desc) {
+            document.getElementById('homeView').classList.add('hidden');
+            document.getElementById('playerView').classList.remove('hidden');
+            
+            document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
+            document.getElementById('playerTitle').innerText = title;
+            document.getElementById('playerDesc').innerText = desc;
+            document.getElementById('playerPoster').src = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
+            
+            window.scrollTo(0,0);
+        }
+
+        // 4. ฟังก์ชันสลับหน้า
+        function switchView(view) {
+            if (view === 'home') {
+                document.getElementById('playerView').classList.add('hidden');
+                document.getElementById('homeView').classList.remove('hidden');
+                document.getElementById('mainPlayer').src = ''; // หยุดวิดีโอ
+            }
+        }
+
+        // 5. ฟังก์ชันค้นหาและกรอง
+        function filterCategory(cat) {
+            renderMovies(allMovies.filter(m => m.category === cat));
+        }
+
+        function searchMovies() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            renderMovies(allMovies.filter(m => m.title.toLowerCase().includes(query)));
+        }
+
+        // 6. เช็คสถานะ Login
+        function checkLogin() {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                document.getElementById('loginButton').classList.add('hidden');
+                document.getElementById('loggedInUser').classList.remove('hidden');
+                document.getElementById('loggedInUser').classList.add('flex');
+                document.getElementById('usernameDisplay').innerText = 'Admin';
+            }
+        }
+
+        document.getElementById('logoutButton').onclick = () => {
+            localStorage.removeItem('accessToken');
+            window.location.reload();
+        };
+    </script>
 </body>
 </html>

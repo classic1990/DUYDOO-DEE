@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบหลังบ้าน - DUYDODEE 4K</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .btn-grad { background: linear-gradient(to right, #0ea5e9, #2563eb); }
+    </style>
+    <script>
+        // Security Check: ตรวจสอบ Token ก่อนโหลดหน้าเว็บ
+        const accessToken = localStorage.getItem('accessToken');
+        if (!accessToken) {
+            window.location.href = 'login.html';
+        }
+    </script>
+</head>
+<body class="min-h-screen flex">
+
+    <aside class="w-64 glass-card border-r border-slate-800 p-6 flex flex-col gap-8 hidden md:flex">
+        <div class="flex items-center gap-3 px-2">
+            <div class="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg"><i class="fa-solid fa-user-shield text-white"></i></div>
+            <h1 class="font-bold text-white tracking-tight">ADMIN PANEL</h1>
+        </div>
+        <nav class="flex flex-col gap-2">
+            <button onclick="location.reload()" class="flex items-center gap-3 px-4 py-3 bg-sky-500/10 text-sky-400 rounded-xl font-medium border border-sky-500/20"><i class="fa-solid fa-film w-5"></i> จัดการหนัง</button>
+            <a href="index.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-white transition"><i class="fa-solid fa-house w-5"></i> กลับหน้าเว็บ</a>
+            <button onclick="logout()" class="flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl transition mt-10"><i class="fa-solid fa-power-off w-5"></i> ออกจากระบบ</button>
+        </nav>
+    </aside>
+
+    <main class="flex-1 p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-10">
+            <h2 class="text-2xl font-bold text-white">จัดการข้อมูลหนัง</h2>
+            <button onclick="openModal()" class="btn-grad px-6 py-3 rounded-xl text-white font-bold shadow-lg flex items-center gap-2">
+                <i class="fa-solid fa-plus"></i> เพิ่มหนังใหม่
+            </button>
+        </div>
+
+        <div class="glass-card rounded-3xl overflow-hidden shadow-2xl">
+            <table class="w-full text-left">
+                <thead class="bg-slate-800/50 text-slate-400 text-xs uppercase font-bold">
+                    <tr>
+                        <th class="px-6 py-4">หนัง</th>
+                        <th class="px-6 py-4">หมวดหมู่</th>
+                        <th class="px-6 py-4">คะแนน</th>
+                        <th class="px-6 py-4">Link ID</th>
+                        <th class="px-6 py-4 text-right">เครื่องมือ</th>
+                    </tr>
+                </thead>
+                <tbody id="movieTableBody" class="divide-y divide-slate-800">
+                    </tbody>
+            </table>
+        </div>
+    </main>
+
+    <div id="movieModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+        <div class="glass-card w-full max-w-xl rounded-3xl p-8 border border-slate-700">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-white">ใส่ข้อมูลหนัง</h3>
+                <button onclick="closeModal()" class="text-slate-400 text-2xl">&times;</button>
+            </div>
+
+            <div class="mb-6 p-4 bg-sky-500/10 rounded-2xl border border-sky-500/20">
+                <label class="block text-[10px] font-bold text-sky-400 uppercase mb-2">ใช้ AI ดึงข้อมูลจาก YouTube</label>
+                <div class="flex gap-2">
+                    <input type="text" id="aiInput" placeholder="วางลิงก์ YouTube ที่นี่..." class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none">
+                    <button onclick="fetchWithAI()" id="aiBtn" class="bg-sky-500 text-white px-4 py-2 rounded-lg text-sm font-bold"><i class="fa-solid fa-bolt"></i></button>
+                </div>
+            </div>
+
+            <form id="movieForm" class="grid grid-cols-2 gap-4">
+                <div class="col-span-2">
+                    <label class="block text-xs text-slate-400 mb-1">ชื่อหนัง</label>
+                    <input type="text" id="mTitle" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none focus:border-sky-500">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">ปีที่ฉาย</label>
+                    <input type="number" id="mYear" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">คะแนน</label>
+                    <input type="number" step="0.1" id="mRating" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">หมวดหมู่</label>
+                    <select id="mCategory" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none">
+                        <option value="china">ซีรีส์จีน</option>
+                        <option value="vertical">ซีรีส์แนวตั้ง</option>
+                        <option value="inter">หนังฝรั่ง</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">YouTube ID</label>
+                    <input type="text" id="mYtId" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none">
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-xs text-slate-400 mb-1">URL รูปปก</label>
+                    <input type="text" id="mPoster" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 outline-none text-xs">
+                </div>
+                <div class="col-span-2 mt-4 flex gap-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 py-3 bg-slate-800 rounded-xl font-bold">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-3 btn-grad text-white rounded-xl font-bold shadow-lg shadow-sky-500/20">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        const token = localStorage.getItem('accessToken');
+
+        // โหลดข้อมูลหนังมาแสดง
+        async function loadMovies() {
+            try {
+                const res = await fetch(`${API_URL}/movies`);
+                const data = await res.json();
+                const tbody = document.getElementById('movieTableBody');
+                tbody.innerHTML = data.data.map(movie => `
+                    <tr class="hover:bg-slate-800/30 transition">
+                        <td class="px-6 py-4 flex items-center gap-3">
+                            <img src="${movie.posterUrl}" class="w-10 h-14 rounded object-cover">
+                            <span class="font-medium">${movie.title}</span>
+                        </td>
+                        <td class="px-6 py-4 uppercase text-[10px]"><span class="bg-slate-700 px-2 py-1 rounded">${movie.category || 'china'}</span></td>
+                        <td class="px-6 py-4 text-yellow-400 font-bold">${movie.rating}</td>
+                        <td class="px-6 py-4 font-mono text-xs">${movie.ytId}</td>
+                        <td class="px-6 py-4 text-right">
+                            <button onclick="deleteMovie('${movie._id}')" class="text-red-400 hover:text-red-300 px-2"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) { console.error("Load failed", err); }
+        }
+
+        // ใช้ AI ดึงข้อมูล
+        async function fetchWithAI() {
+            const url = document.getElementById('aiInput').value;
+            const videoId = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+            if (!videoId) return alert("URL YouTube ไม่ถูกต้อง");
+
+            const btn = document.getElementById('aiBtn');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            
+            try {
+                const res = await fetch(`${API_URL}/fetch-movie-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ videoId })
+                });
+                const result = await res.json();
+                if (result.success) {
+                    document.getElementById('mTitle').value = result.data.title;
+                    document.getElementById('mYear').value = result.data.year;
+                    document.getElementById('mRating').value = result.data.rating;
+                    document.getElementById('mYtId').value = result.data.ytId;
+                    document.getElementById('mPoster').value = result.data.posterUrl;
+                }
+            } catch (err) { alert("AI ทำงานผิดพลาด"); }
+            btn.innerHTML = '<i class="fa-solid fa-bolt"></i>';
+        }
+
+        // บันทึกหนัง
+        document.getElementById('movieForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const movieData = {
+                title: document.getElementById('mTitle').value,
+                year: document.getElementById('mYear').value,
+                rating: document.getElementById('mRating').value,
+                category: document.getElementById('mCategory').value,
+                ytId: document.getElementById('mYtId').value,
+                posterUrl: document.getElementById('mPoster').value
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/movies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify(movieData)
+                });
+                if (res.ok) {
+                    alert("บันทึกสำเร็จ!");
+                    closeModal();
+                    loadMovies();
+                }
+            } catch (err) { alert("บันทึกไม่สำเร็จ"); }
+        };
+
+        // ลบหนัง
+        async function deleteMovie(id) {
+            if (!confirm("ต้องการลบหนังเรื่องนี้ใช่ไหม?")) return;
+            await fetch(`${API_URL}/movies/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            loadMovies();
+        }
+
+        function openModal() { document.getElementById('movieModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('movieModal').classList.add('hidden'); }
+        function logout() { localStorage.removeItem('accessToken'); window.location.href = 'index.html'; }
+
+        loadMovies();
+    </script>
+</body>
+</html>
