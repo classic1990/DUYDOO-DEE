@@ -114,7 +114,11 @@ app.post('/api/fetch-movie-data', authenticateToken, async (req, res) => {
         const prompt = `สรุปข้อมูลหนังจาก: "${snippet.title}" รายละเอียด: "${snippet.description}" 
                         ตอบเป็น JSON เท่านั้น: { "title": "ชื่อไทย", "year": 20XX, "rating": 9.0, "description": "เรื่องย่อ", "actors": "ชื่อนักแสดง", "lessons": "ข้อคิด" }`;
 
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        });
+        
         const aiData = JSON.parse(result.response.text().replace(/```json|```/g, "").trim());
 
         res.json({
