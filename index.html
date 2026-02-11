@@ -34,15 +34,15 @@
                     <i class="fa-solid fa-sun"></i>
                 </button>
                 <div class="relative hidden sm:block group">
-                    <input type="text" id="searchInput" onkeyup="searchMovies()" placeholder="ค้นหาซีรีส์..." 
+                    <input type="text" id="searchInput" oninput="searchMovies()" placeholder="ค้นหาซีรีส์..." 
                         class="bg-slate-800/50 border border-slate-700 rounded-full py-1.5 px-4 pl-10 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 w-48 transition-all group-hover:w-64 text-slate-200">
                     <span class="absolute left-3 top-2 opacity-50"><i class="fa-solid fa-magnifying-glass"></i></span>
                 </div>
                 <!-- Admin Toggle Button -->
-                <button onclick="switchView('admin')" class="hidden text-slate-400 hover:text-white text-sm bg-slate-800/50 p-2 rounded-full transition" title="จัดการหลังบ้าน">
+                <button id="adminBtn" onclick="switchView('admin')" class="hidden text-slate-400 hover:text-white text-sm bg-slate-800/50 p-2 rounded-full transition" title="จัดการหลังบ้าน">
                     <i class="fa-solid fa-gear"></i>
                 </button>
-                <button id="loginButton" onclick="window.location.href='login.html'" class="bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 px-5 py-1.5 rounded-full text-sm font-semibold shadow-lg shadow-sky-900/50 transition transform hover:-translate-y-0.5">
+                <button id="loginButton" onclick="openLoginModal()" class="bg-gradient-to-r from-sky-600 to-blue-700 hover:from-sky-500 hover:to-blue-600 px-5 py-1.5 rounded-full text-sm font-semibold shadow-lg shadow-sky-900/50 transition transform hover:-translate-y-0.5">
                     เข้าสู่ระบบ
                 </button>
                 <div id="loggedInUser" class="hidden items-center gap-3">
@@ -162,12 +162,10 @@
                                     <span id="playerYear" class="bg-slate-800 border border-slate-700 px-2 py-1 rounded">2024</span>
                                     <span class="flex items-center gap-1 text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded border border-yellow-400/20"><i class="fa-solid fa-star"></i> <span id="playerRating">9.0</span></span>
                                     <span class="bg-sky-500/10 text-sky-400 border border-sky-500/20 px-2 py-1 rounded">พากย์ไทย</span>
-                                    <span class="text-slate-600">|</span>
-                                    <span class="text-slate-400">Action, Fantasy</span>
                                 </div>
-                                <p id="playerDesc" class="text-slate-400 text-sm leading-relaxed mb-6 font-light">
+                                <div id="playerDesc" class="text-slate-400 text-sm leading-relaxed mb-6 font-light">
                                     คำอธิบายเนื้อเรื่อง...
-                                </p>
+                                </div>
                                 <div class="flex gap-3">
                                     <button class="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-5 py-2.5 rounded-xl text-sm text-white transition flex items-center gap-2">
                                         <i class="fa-solid fa-heart"></i> ถูกใจ
@@ -213,7 +211,7 @@
                             <i class="fa-solid fa-file-import mr-2"></i> Import JSON
                         </button>
                         <input type="file" id="importFile" accept=".json" class="hidden" onchange="importMoviesFromJSON(event)">
-                        <button onclick="openModal()" class="px-5 py-2 bg-gradient-to-r from-sky-600 to-blue-600 rounded-lg text-white hover:from-sky-500 hover:to-blue-500 text-sm font-bold shadow-lg shadow-sky-900/50 transition transform hover:scale-105">
+                        <button onclick="openAddModal()" class="px-5 py-2 bg-gradient-to-r from-sky-600 to-blue-600 rounded-lg text-white hover:from-sky-500 hover:to-blue-500 text-sm font-bold shadow-lg shadow-sky-900/50 transition transform hover:scale-105">
                             <i class="fa-solid fa-plus mr-1"></i> เพิ่มหนังใหม่
                         </button>
                     </div>
@@ -422,7 +420,7 @@
                     </div>
                     <div>
                         <label for="inpPassword" class="block text-xs font-bold text-slate-400 mb-1">Password</label>
-                        <input type="password" id="inpPassword" required class="w-full glass-input rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-sky-500 outline-none transition" value="admin1234">
+                        <input type="password" id="inpPassword" required class="w-full glass-input rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-sky-500 outline-none transition">
                     </div>
                     <p id="loginError" class="text-red-400 text-xs hidden"></p>
                     <div class="pt-2 flex justify-end gap-3">
@@ -446,7 +444,7 @@
 
     <!-- JAVASCRIPT LOGIC -->
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API_URL = '/api';
         let allMovies = [];
 
         // ทำงานเมื่อโหลดหน้าเว็บเสร็จ
@@ -463,6 +461,8 @@
                 if (json.success) {
                     allMovies = json.data;
                     renderMovies(allMovies);
+                    renderAdminTable(allMovies);
+                    updateAdminStats();
                 }
             } catch (err) {
                 console.error("Failed to load movies", err);
@@ -480,7 +480,7 @@
             
             grid.innerHTML = movies.map(m => `
                 <div class="group relative bg-slate-800 rounded-xl overflow-hidden shadow-lg hover:shadow-sky-500/20 transition duration-300 cursor-pointer border border-slate-700" 
-                     onclick="openPlayer('${m.ytId}', '${escapeHtml(m.title)}', '${escapeHtml(m.description || '')}')">
+                     onclick="openPlayer('${m.ytId}', '${escapeJsArg(m.title)}', '${escapeJsArg(m.description || '')}', '${escapeJsArg(m.lessons || '')}', '${escapeJsArg(m.actors || '')}', '${m.rating}', '${m.year}')">
                     <div class="aspect-[2/3] overflow-hidden relative">
                         <img src="${m.posterUrl}" alt="${m.title}" class="w-full h-full object-cover transform group-hover:scale-110 transition duration-500">
                         <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -502,18 +502,42 @@
         }
 
         // Helper: ป้องกันตัวอักษรพิเศษทำโค้ดพัง
+        function escapeJsArg(text) {
+            if (!text) return '';
+            // Escape backslashes, single quotes for JS string, and double quotes for HTML attribute
+            return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, ' ');
+        }
+
         function escapeHtml(text) {
             return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;").replace(/\n/g, ' ');
         }
 
         // 3. ฟังก์ชันเปิด Player
-        function openPlayer(ytId, title, desc) {
+        function openPlayer(ytId, title, desc, lessons, actors, rating, year) {
             document.getElementById('homeView').classList.add('hidden');
             document.getElementById('playerView').classList.remove('hidden');
             
             document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0`;
             document.getElementById('playerTitle').innerText = title;
-            document.getElementById('playerDesc').innerText = desc;
+            document.getElementById('playerRating').innerText = rating || '0.0';
+            document.getElementById('playerYear').innerText = year || '2024';
+            
+            let htmlContent = '';
+            
+            // ส่วนนักแสดง (Actors) - ปรับแต่ง CSS ให้เด่นขึ้น (สีฟ้า + ตัวหนา)
+            if (actors) {
+                htmlContent += `<div class="mb-3 text-sky-400 font-bold text-base"><i class="fa-solid fa-user-group mr-2"></i>นักแสดง: <span class="text-slate-200 font-normal">${escapeHtml(actors)}</span></div>`;
+            }
+            
+            // เนื้อเรื่อง
+            htmlContent += `<p class="mb-4">${escapeHtml(desc)}</p>`;
+            
+            // ข้อคิด (Lessons) - ตกแต่งเพิ่มเติม (กรอบสีเหลือง)
+            if (lessons) {
+                htmlContent += `<div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-200 text-sm"><i class="fa-solid fa-lightbulb text-yellow-400 mr-2"></i>ข้อคิด: ${escapeHtml(lessons)}</div>`;
+            }
+            
+            document.getElementById('playerDesc').innerHTML = htmlContent;
             document.getElementById('playerPoster').src = `https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`;
             
             window.scrollTo(0,0);
@@ -523,8 +547,15 @@
         function switchView(view) {
             if (view === 'home') {
                 document.getElementById('playerView').classList.add('hidden');
+                document.getElementById('adminView').classList.add('hidden');
                 document.getElementById('homeView').classList.remove('hidden');
                 document.getElementById('mainPlayer').src = ''; // หยุดวิดีโอ
+            } else if (view === 'admin') {
+                document.getElementById('homeView').classList.add('hidden');
+                document.getElementById('playerView').classList.add('hidden');
+                document.getElementById('adminView').classList.remove('hidden');
+                renderAdminTable(allMovies);
+                updateAdminStats();
             }
         }
 
@@ -546,6 +577,7 @@
                 document.getElementById('loggedInUser').classList.remove('hidden');
                 document.getElementById('loggedInUser').classList.add('flex');
                 document.getElementById('usernameDisplay').innerText = 'Admin';
+                document.getElementById('adminBtn').classList.remove('hidden');
             }
         }
 
@@ -553,6 +585,197 @@
             localStorage.removeItem('accessToken');
             window.location.reload();
         };
+
+        // --- ส่วนที่เพิ่มใหม่: ฟังก์ชันเชื่อมต่อ API และจัดการ Modal ---
+
+        function openLoginModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+        function closeLoginModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+        }
+        function openModal() {
+            document.getElementById('movieModal').classList.remove('hidden');
+        }
+        function closeModal() {
+            document.getElementById('movieModal').classList.add('hidden');
+        }
+        function openAddModal() {
+            document.getElementById('movieForm').reset();
+            document.getElementById('editId').value = '';
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-sky-400"></i> เพิ่มหนังใหม่';
+            document.getElementById('posterPreview').src = 'https://via.placeholder.com/300x450?text=No+Image';
+            openModal();
+        }
+        function updatePreview() {
+            const url = document.getElementById('inpPoster').value;
+            if(url) document.getElementById('posterPreview').src = url;
+        }
+
+        // 1. จัดการการ Login (เรียก API /api/login)
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('inpUsername').value;
+            const password = document.getElementById('inpPassword').value;
+            
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    localStorage.setItem('accessToken', data.accessToken);
+                    closeLoginModal();
+                    checkLogin();
+                    alert('เข้าสู่ระบบสำเร็จ');
+                } else {
+                    const errEl = document.getElementById('loginError');
+                    errEl.innerText = data.message;
+                    errEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // 3. จัดการ Form หนัง (Add/Edit)
+        document.getElementById('movieForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editId').value;
+            const formData = {
+                title: document.getElementById('inpTitle').value,
+                year: document.getElementById('inpYear').value,
+                rating: document.getElementById('inpRating').value,
+                ytId: document.getElementById('inpYt').value,
+                category: document.getElementById('inpCategory').value,
+                posterUrl: document.getElementById('inpPoster').value,
+                episodes: document.getElementById('inpEp').value
+            };
+
+            const method = id ? 'PUT' : 'POST';
+            const url = id ? `${API_URL}/movies/${id}` : `${API_URL}/movies`;
+
+            try {
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert('บันทึกข้อมูลสำเร็จ');
+                    closeModal();
+                    loadMovies();
+                } else {
+                    alert('เกิดข้อผิดพลาด: ' + result.message);
+                }
+            } catch (error) {
+                console.error(error);
+                alert('เชื่อมต่อ Server ไม่ได้');
+            }
+        });
+
+        // 4. ฟังก์ชัน Admin (Render Table, Edit, Delete)
+        function renderAdminTable(movies) {
+            const tbody = document.getElementById('adminTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = movies.map(m => `
+                <tr class="hover:bg-slate-800/50 transition group border-b border-slate-800/50">
+                    <td class="px-6 py-4">
+                        <img src="${m.posterUrl}" class="w-10 h-14 object-cover rounded shadow-md bg-slate-800">
+                    </td>
+                    <td class="px-6 py-4 font-medium text-white">${m.title}</td>
+                    <td class="px-6 py-4 text-slate-400">${m.year}</td>
+                    <td class="px-6 py-4 font-mono text-xs text-sky-400">${m.ytId}</td>
+                    <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="editMovie(${m.id})" class="text-slate-400 hover:text-sky-400 transition p-2"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteMovie(${m.id})" class="text-slate-400 hover:text-red-400 transition p-2"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function updateAdminStats() {
+            document.getElementById('adminTotalMovies').innerText = allMovies.length;
+            const avg = allMovies.reduce((acc, m) => acc + parseFloat(m.rating || 0), 0) / (allMovies.length || 1);
+            document.getElementById('adminAvgRating').innerText = avg.toFixed(1);
+        }
+
+        function searchAdminMovies() {
+            const query = document.getElementById('adminSearchInput').value.toLowerCase();
+            const filtered = allMovies.filter(m => m.title.toLowerCase().includes(query) || String(m.year).includes(query));
+            renderAdminTable(filtered);
+        }
+
+        function editMovie(id) {
+            const movie = allMovies.find(m => m.id === id);
+            if (!movie) return;
+            document.getElementById('editId').value = movie.id;
+            document.getElementById('inpTitle').value = movie.title;
+            document.getElementById('inpYear').value = movie.year;
+            document.getElementById('inpRating').value = movie.rating;
+            document.getElementById('inpYt').value = movie.ytId;
+            document.getElementById('inpCategory').value = movie.category;
+            document.getElementById('inpPoster').value = movie.posterUrl;
+            document.getElementById('inpEp').value = movie.episodes || 1;
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-sky-400"></i> แก้ไขหนัง';
+            updatePreview();
+            openModal();
+        }
+
+        async function deleteMovie(id) {
+            if (!confirm('คุณต้องการลบหนังเรื่องนี้ใช่หรือไม่?')) return;
+            try {
+                const res = await fetch(`${API_URL}/movies/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadMovies();
+                } else {
+                    alert('ลบไม่สำเร็จ: ' + data.message);
+                }
+            } catch (err) {
+                alert('เชื่อมต่อ Server ไม่ได้');
+            }
+        }
+
+        // 2. ฟังก์ชัน AI Auto-Fill (เรียก API /api/fetch-movie-data)
+        async function aiAutoFill() {
+            const url = document.getElementById('inpAiLink').value;
+            if (!url) return alert('กรุณาใส่ลิงก์ YouTube');
+            
+            // ดึง Video ID จากลิงก์
+            let videoId = url;
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            if (match && match[2].length === 11) videoId = match[2];
+
+            const token = localStorage.getItem('accessToken');
+            if (!token) return alert('กรุณาเข้าสู่ระบบก่อนใช้งาน AI');
+
+            try {
+                const res = await fetch(`${API_URL}/fetch-movie-data`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ videoId })
+                });
+                const json = await res.json();
+                if (json.success) {
+                    document.getElementById('inpTitle').value = json.data.title;
+                    document.getElementById('inpYear').value = json.data.year;
+                    document.getElementById('inpRating').value = json.data.rating;
+                    document.getElementById('inpYt').value = json.data.ytId;
+                    document.getElementById('inpPoster').value = json.data.posterUrl;
+                    updatePreview();
+                } else {
+                    alert(json.message);
+                }
+            } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+            }
+        }
     </script>
 </body>
 </html>
