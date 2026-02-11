@@ -6,8 +6,11 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 const axios = require('axios');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 
@@ -16,9 +19,40 @@ app.use(cors());
 app.use(express.json());
 // ส่งไฟล์จากโฟลเดอร์ client (หน้าบ้าน) ออกไป
 app.use(express.static(path.join(__dirname, '../client')));
+// Trust the first proxy, which is important for rate limiting to work correctly
+// when the app is behind a reverse proxy (like Nginx or a cloud load balancer).
+app.set('trust proxy', 1);
 
 // --- 2. CONFIGURATIONS ---
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Nodemailer Transporter Configuration
+const transporter = nodemailer.createTransport({
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_PORT == 465, // true for 465, false for other ports
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+// Rate Limiting Policies
+const authLimiter = rateLimit({
+	windowMs: 60 * 60 * 1000, // 1 hour
+	max: 10, // Limit each IP to 10 login/register requests per window (per hour)
+	message: { success: false, message: 'มีการพยายามเข้าสู่ระบบจาก IP นี้มากเกินไป กรุณาลองใหม่ในอีก 1 ชั่วโมง' },
+	standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+	legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+const apiLimiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 minutes
+	max: 100, // Limit each IP to 100 requests per window (per 15 minutes)
+	message: { success: false, message: 'มีการเรียกใช้งาน API จาก IP นี้มากเกินไป กรุณาลองใหม่ในอีก 15 นาที' },
+	standardHeaders: true,
+	legacyHeaders: false,
+});
 
 // --- 3. DATABASE CONNECTION ---
 mongoose.connect(process.env.MONGO_URI)
@@ -34,7 +68,9 @@ mongoose.connect(process.env.MONGO_URI)
 const userSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true, trim: true, lowercase: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ['admin', 'vip', 'user'], default: 'user' }
+    role: { type: String, enum: ['admin', 'vip', 'user'], default: 'user' },
+    passwordResetToken: String,
+    passwordResetExpires: Date,
 });
 
 // Middleware to hash password before saving
@@ -52,6 +88,20 @@ userSchema.pre('save', async function(next) {
 // Method to compare password
 userSchema.methods.comparePassword = function(candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Method to generate password reset token
+userSchema.methods.createPasswordResetToken = function() {
+    const resetToken = crypto.randomBytes(32).toString('hex');
+
+    this.passwordResetToken = crypto
+        .createHash('sha256')
+        .update(resetToken)
+        .digest('hex');
+
+    this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    return resetToken;
 };
 
 const User = mongoose.model('User', userSchema);
@@ -108,7 +158,7 @@ const authorizeAdmin = (req, res, next) => {
 const apiRouter = express.Router();
 
 // [LOGIN] สำหรับ Admin และ VIP
-apiRouter.post('/login', async (req, res) => {
+apiRouter.post('/login', authLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -145,7 +195,7 @@ apiRouter.post('/login', async (req, res) => {
 });
 
 // [REGISTER] สำหรับผู้ใช้ทั่วไป
-apiRouter.post('/register', async (req, res) => {
+apiRouter.post('/register', authLimiter, async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -173,6 +223,87 @@ apiRouter.post('/register', async (req, res) => {
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการลงทะเบียน' });
     }
 });
+
+// [FORGOT PASSWORD]
+apiRouter.post('/forgot-password', async (req, res) => {
+    try {
+        // 1) Get user based on POSTed username
+        const user = await User.findOne({ username: req.body.username });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'ไม่พบชื่อผู้ใช้ในระบบ' });
+        }
+
+        // 2) Generate the random reset token
+        const resetToken = user.createPasswordResetToken();
+        await user.save({ validateBeforeSave: false });
+
+        // 3) Send it to user's email
+        // Note: In a real app, user schema should have an email field. We use username as a placeholder.
+        const resetURL = `${req.protocol}://${req.get('host')}/reset-password.html?token=${resetToken}`;
+
+        const message = `
+            คุณได้รับอีเมลนี้เนื่องจากคุณ (หรือใครบางคน) ได้ร้องขอการรีเซ็ตรหัสผ่านสำหรับบัญชีของคุณ
+            กรุณาคลิกลิงก์ต่อไปนี้เพื่อตั้งรหัสผ่านใหม่: ${resetURL}
+            ลิงก์นี้จะหมดอายุใน 10 นาที
+            หากคุณไม่ได้เป็นผู้ร้องขอ กรุณาเพิกเฉยอีเมลนี้
+        `;
+
+        await transporter.sendMail({
+            from: `"DUYDODEE 4K Support" <${process.env.EMAIL_FROM}>`,
+            to: req.body.username, // This should be user.email in a real app
+            subject: 'คำขอรีเซ็ตรหัสผ่าน (มีผล 10 นาที)',
+            text: message,
+        });
+
+        res.status(200).json({ success: true, message: 'ลิงก์สำหรับรีเซ็ตรหัสผ่านได้ถูกส่งไปยังอีเมลของคุณแล้ว' });
+    } catch (err) {
+        // Invalidate token and expiry if something goes wrong
+        if (user) {
+            user.passwordResetToken = undefined;
+            user.passwordResetExpires = undefined;
+            await user.save({ validateBeforeSave: false });
+        }
+        console.error('FORGOT PASSWORD ERROR:', err);
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการส่งอีเมล' });
+    }
+});
+
+// [RESET PASSWORD]
+apiRouter.post('/reset-password/:token', async (req, res) => {
+    try {
+        // 1) Get user based on the token
+        const hashedToken = crypto
+            .createHash('sha256')
+            .update(req.params.token)
+            .digest('hex');
+
+        const user = await User.findOne({
+            passwordResetToken: hashedToken,
+            passwordResetExpires: { $gt: Date.now() },
+        });
+
+        // 2) If token has not expired, and there is user, set the new password
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Token ไม่ถูกต้องหรือหมดอายุแล้ว' });
+        }
+
+        if (req.body.password.length < 6) {
+            return res.status(400).json({ success: false, message: 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร' });
+        }
+
+        user.password = req.body.password;
+        user.passwordResetToken = undefined;
+        user.passwordResetExpires = undefined;
+        await user.save();
+
+        // 3) Log the user in, send JWT
+        // (This part is optional, but good UX)
+        res.status(200).json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ! คุณสามารถเข้าสู่ระบบด้วยรหัสผ่านใหม่ได้แล้ว' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน' });
+    }
+});
+
 // [AI FETCH] - ดึงข้อมูลด้วย Gemini
 apiRouter.post('/fetch-movie-data', authenticateToken, authorizeAdmin, async (req, res) => {
     try {
@@ -259,7 +390,8 @@ apiRouter.post('/comments', async (req, res) => {
     }
 });
 
-app.use('/api', apiRouter);
+// Apply the general rate limiter to all requests to /api
+app.use('/api', apiLimiter, apiRouter);
 
 // --- Global Error Handler ---
 app.use((err, req, res, next) => {

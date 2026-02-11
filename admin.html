@@ -14,9 +14,18 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         input, select, textarea { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
         input:focus { border-color: #0ea5e9 !important; ring: 2px #0ea5e9; }
+        .toast-enter { transform: translateX(120%); }
     </style>
 </head>
 <body class="custom-scrollbar min-h-screen">
+
+    <script>
+        // ตรวจสอบ Token ทันทีที่หน้าโหลด
+        if (!localStorage.getItem('accessToken')) {
+            // ถ้าไม่มี Token ให้เด้งไปหน้า login (สมมติว่าชื่อ login.html)
+            window.location.href = '/login.html';
+        }
+    </script>
 
     <div class="flex flex-col md:flex-row">
         <aside class="w-full md:w-64 md:h-screen sticky top-0 bg-slate-950 p-6 border-r border-slate-800">
@@ -29,6 +38,11 @@
                 </a>
                 <a href="/client/index.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
                     <i class="fa-solid fa-eye"></i> ดูหน้าเว็บหลัก
+                </a>
+            </nav>
+            <nav class="mt-auto pt-10">
+                <a href="#" onclick="logout()" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-red-900/50 hover:text-red-400 rounded-xl transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
                 </a>
             </nav>
         </aside>
@@ -69,6 +83,9 @@
                         <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
                     </table>
                 </div>
+                <div id="paginationControls" class="p-4 flex justify-center items-center gap-2 text-sm">
+                    <!-- Pagination buttons will be rendered here by JavaScript -->
+                </div>
             </div>
         </main>
     </div>
@@ -96,16 +113,17 @@
                 <input type="hidden" id="movieId">
                 
                 <div class="space-y-4">
-                    <div class="aspect-[2/3] rounded-2xl bg-slate-900 border-2 border-dashed border-slate-700 overflow-hidden relative group">
+                    <div class="aspect-[2/3] rounded-2xl bg-slate-900 border-2 border-dashed border-slate-700 overflow-hidden relative group cursor-pointer" onclick="document.getElementById('posterFile').click()">
                         <img id="posterPreview" src="" class="w-full h-full object-cover hidden">
                         <div id="posterPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
                             <i class="fa-solid fa-image text-4xl mb-2"></i>
-                            <p class="text-xs text-center px-4">ใส่ลิงก์รูปเพื่อ Preview</p>
+                            <p class="text-xs text-center px-4">คลิกเพื่ออัปโหลดปก</p>
                         </div>
+                        <input type="file" id="posterFile" accept="image/*" class="hidden">
                     </div>
                     <div>
-                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">Poster URL</label>
-                        <input type="text" id="posterUrl" oninput="updatePreview()" class="w-full px-3 py-2 rounded-lg text-sm" required>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">หรือวาง Poster URL</label>
+                        <input type="text" id="posterUrl" oninput="handleUrlInput()" class="w-full px-3 py-2 rounded-lg text-sm">
                     </div>
                 </div>
 
@@ -157,6 +175,11 @@
                     <div class="flex gap-2 pt-4">
                         <button type="submit" class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition shadow-lg shadow-green-900/20">บันทึก</button>
                     </div>
+                    <!-- Progress Bar -->
+                    <div id="progressContainer" class="w-full bg-slate-700 rounded-full h-2.5 mt-4 hidden">
+                        <div id="progressBar" class="bg-sky-500 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        <p id="progressText" class="text-center text-xs text-slate-400 mt-1"></p>
+                    </div>
                 </div>
 
                 <div class="md:col-span-3">
@@ -167,37 +190,106 @@
         </div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-5 right-5 bg-red-600 text-white px-6 py-3 rounded-lg shadow-lg transform toast-enter transition-transform duration-300 z-[200]">
+        <span id="toastMessage"></span>
+    </div>
+
     <script>
-        const API_URL = 'http://localhost:5000/api';
-        let allMovies = [];
+        const API_URL = '/api'; // สำคัญ: เปลี่ยนเป็น relative path สำหรับ production
+        
+        // State for pagination and search
+        let currentPage = 1;
+        const MOVIES_PER_PAGE = 10;
+        let currentSearchQuery = '';
+        let debounceTimer;
+
+        // --- Toast Notification System ---
+        let toastTimeout;
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            clearTimeout(toastTimeout);
+            toastMessage.innerText = message;
+            toast.classList.remove('bg-red-600', 'bg-green-600', 'bg-sky-600');
+            if (type === 'success') toast.classList.add('bg-green-600');
+            else if (type === 'info') toast.classList.add('bg-sky-600');
+            else toast.classList.add('bg-red-600');
+            toast.classList.remove('toast-enter');
+            toastTimeout = setTimeout(() => {
+                toast.classList.add('toast-enter');
+            }, 4000);
+        }
+
+        // --- Secure Fetch Wrapper ---
+        // ฟังก์ชันนี้จะแนบ Token ไปกับทุก request และจัดการเมื่อ Token หมดอายุ
+        async function secureFetch(url, options = {}) {
+            const token = localStorage.getItem('accessToken');
+            const headers = { ...options.headers };
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            const res = await fetch(url, { ...options, headers });
+
+            if (res.status === 401) {
+                showToast('เซสชั่นหมดอายุ, กรุณาล็อกอินใหม่', 'error');
+                setTimeout(() => logout(), 2000);
+                throw new Error('Unauthorized');
+            }
+            return res;
+        }
+
+        function logout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('userRole');
+            window.location.href = '/login.html';
+        }
 
         // 1. โหลดข้อมูลทั้งหมด
-        async function loadMovies() {
+        async function loadMovies(page = 1, search = '') {
+            const tableBody = document.getElementById('adminTableBody');
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center p-8 text-slate-500"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i>กำลังโหลดข้อมูล...</td></tr>`;
             try {
-                const res = await fetch(`${API_URL}/movies`);
+                const res = await secureFetch(`${API_URL}/movies?page=${page}&limit=${MOVIES_PER_PAGE}&search=${search}`);
+                if (!res.ok) throw new Error('Failed to load movies');
                 const json = await res.json();
-                allMovies = json.data;
-                renderTable(allMovies);
-                updateStats();
-            } catch (err) { alert('เชื่อมต่อ Server ไม่ได้'); }
+                // API ควรส่งข้อมูลสถิติและ pagination กลับมาด้วย
+                renderTable(json.data);
+                updateStats(json.stats); // เช่น { total: 100, vip: 15 }
+                renderPagination(json.currentPage, json.totalPages);
+                currentPage = json.currentPage;
+            } catch (err) { 
+                if (err.message !== 'Unauthorized') {
+                    showToast('เชื่อมต่อ Server ไม่ได้ หรือเกิดข้อผิดพลาด', 'error');
+                }
+            }
         }
 
         // 2. แสดงตาราง
         function renderTable(movies) {
-            document.getElementById('adminTableBody').innerHTML = movies.map(m => `
-                <tr class="hover:bg-slate-900 transition">
-                    <td class="p-2">
-                        <img src="${m.posterUrl}" alt="${m.title}" class="w-12 h-auto object-cover rounded-md" onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'">
-                    </td>
-                    <td class="p-4 font-bold text-sm">${m.title} <br> <span class="text-xs text-slate-500 font-normal">${m.year}</span></td>
-                    <td class="p-4 text-xs font-medium uppercase text-slate-400">${m.category}</td>
-                    <td class="p-4">${m.isVip ? '<span class="text-yellow-500 text-xs font-bold bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20"><i class="fa-solid fa-crown"></i> VIP</span>' : '<span class="text-slate-500 text-xs">FREE</span>'}</td>
-                    <td class="p-4 text-right">
-                        <button onclick="editMovie('${m._id}')" class="text-sky-400 hover:text-white p-2 transition"><i class="fa-solid fa-pen-to-square"></i></button>
-                        <button onclick="deleteMovie('${m._id}')" class="text-red-400 hover:text-white p-2 transition"><i class="fa-solid fa-trash-can"></i></button>
-                    </td>
-                </tr>
-            `).join('');
+            const userRole = localStorage.getItem('userRole');
+            document.getElementById('adminTableBody').innerHTML = movies.map(m => {
+                // --- ตรวจสอบ Role เพื่อสร้างปุ่มลบ ---
+                const deleteButton = userRole === 'admin'
+                    ? `<button onclick="deleteMovie('${m._id}')" class="text-red-400 hover:text-white p-2 transition"><i class="fa-solid fa-trash-can"></i></button>`
+                    : ''; // ถ้าไม่ใช่ admin, ปุ่มจะเป็นค่าว่าง
+
+                return `
+                    <tr class="hover:bg-slate-900 transition">
+                        <td class="p-2">
+                            <img src="${m.posterUrl}" alt="${m.title}" class="w-12 h-auto object-cover rounded-md" onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'">
+                        </td>
+                        <td class="p-4 font-bold text-sm">${m.title} <br> <span class="text-xs text-slate-500 font-normal">${m.year}</span></td>
+                        <td class="p-4 text-xs font-medium uppercase text-slate-400">${m.category}</td>
+                        <td class="p-4">${m.isVip ? '<span class="text-yellow-500 text-xs font-bold bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20"><i class="fa-solid fa-crown"></i> VIP</span>' : '<span class="text-slate-500 text-xs">FREE</span>'}</td>
+                        <td class="p-4 text-right">
+                            <button onclick="editMovie('${m._id}')" class="text-sky-400 hover:text-white p-2 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                            ${deleteButton}
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         // 3. ฟังก์ชั่น AI จัดเต็ม
@@ -206,17 +298,18 @@
             const url = document.getElementById('aiUrl').value;
             const vid = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1] || url;
             
-            if(!vid) return alert('ใส่ลิงก์ YouTube ก่อนครับ');
+            if(!vid) return showToast('กรุณาใส่ลิงก์ YouTube ที่ถูกต้อง', 'info');
 
             btn.disabled = true;
             btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> AI กำลังทำงาน...';
 
             try {
-                const res = await fetch(`${API_URL}/fetch-movie-data`, {
+                const res = await secureFetch(`${API_URL}/fetch-movie-data`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ videoId: vid })
                 });
+                if (!res.ok) throw new Error('AI service failed');
                 const json = await res.json();
                 
                 if(json.success) {
@@ -229,8 +322,12 @@
                     document.getElementById('description').value = d.description + "\n\nนักแสดง: " + d.actors + "\nข้อคิด: " + d.lessons;
                     updatePreview();
                 }
-            } catch (err) { alert('AI Error'); }
-            
+            } catch (err) { 
+                if (err.message !== 'Unauthorized') {
+                    showToast('เกิดข้อผิดพลาดจาก AI', 'error');
+                }
+            }
+
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-robot"></i> ดึงข้อมูล AI';
         }
@@ -238,65 +335,223 @@
         // 4. บันทึกข้อมูล
         document.getElementById('movieForm').onsubmit = async (e) => {
             e.preventDefault();
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+
             const id = document.getElementById('movieId').value;
-            const data = {
+            const posterFile = document.getElementById('posterFile').files[0];
+
+            const movieData = {
                 title: document.getElementById('title').value,
                 year: document.getElementById('year').value,
                 rating: document.getElementById('rating').value,
                 ytId: document.getElementById('ytId').value,
-                posterUrl: document.getElementById('posterUrl').value,
                 category: document.getElementById('category').value,
                 totalEpisodes: document.getElementById('totalEpisodes').value,
                 description: document.getElementById('description').value,
                 isVip: document.getElementById('isVip').checked
             };
 
-            await fetch(id ? `${API_URL}/movies/${id}` : `${API_URL}/movies`, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` },
-                body: JSON.stringify(data)
-            });
-            closeModal(); loadMovies();
+            if (posterFile) {
+                const formData = new FormData();
+                formData.append('posterImage', posterFile);
+                for (const key in movieData) {
+                    formData.append(key, movieData[key]);
+                }
+                
+                submitButton.innerText = 'กำลังอัปโหลด...';
+                uploadWithProgress(formData, id);
+            } else {
+                // Add posterUrl only if there's no file upload
+                movieData.posterUrl = document.getElementById('posterUrl').value;
+
+                submitButton.innerText = 'กำลังบันทึก...';
+                try {
+                    const res = await secureFetch(id ? `${API_URL}/movies/${id}` : `${API_URL}/movies`, {
+                        method: id ? 'PUT' : 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(movieData)
+                    });
+                    if (!res.ok) throw new Error('Failed to save data');
+                    closeModal(); 
+                    showToast('บันทึกข้อมูลสำเร็จ', 'success');
+                    loadMovies(id ? currentPage : 1, currentSearchQuery); // โหลดหน้าปัจจุบันถ้าเป็นการแก้ไข, ไปหน้าแรกถ้าสร้างใหม่
+                } catch (err) {
+                    if (err.message !== 'Unauthorized') {
+                        showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'error');
+                    }
+                } finally {
+                    // Re-enable button and restore text in both success and error cases
+                    submitButton.disabled = false;
+                    submitButton.innerText = 'บันทึก';
+                }
+            }
         };
 
-        // UI Helpers
-        function openModal() { document.getElementById('movieModal').classList.remove('hidden'); document.getElementById('movieForm').reset(); document.getElementById('movieId').value = ''; updatePreview(); }
-        function closeModal() { document.getElementById('movieModal').classList.add('hidden'); }
-        function updatePreview() {
-            const url = document.getElementById('posterUrl').value;
-            const img = document.getElementById('posterPreview');
-            const placeholder = document.getElementById('posterPlaceholder');
-            if(url) { img.src = url; img.classList.remove('hidden'); placeholder.classList.add('hidden'); }
-            else { img.classList.add('hidden'); placeholder.classList.remove('hidden'); }
-        }
-        function updateStats() {
-            document.getElementById('statTotal').innerText = allMovies.length;
-            document.getElementById('statVip').innerText = allMovies.filter(m => m.isVip).length;
-        }
-        function editMovie(id) {
-            const m = allMovies.find(i => i._id === id);
-            document.getElementById('movieId').value = m._id;
-            document.getElementById('title').value = m.title;
-            document.getElementById('year').value = m.year;
-            document.getElementById('rating').value = m.rating;
-            document.getElementById('ytId').value = m.ytId;
-            document.getElementById('posterUrl').value = m.posterUrl;
-            document.getElementById('category').value = m.category;
-            document.getElementById('totalEpisodes').value = m.totalEpisodes;
-            document.getElementById('description').value = m.description;
-            document.getElementById('isVip').checked = m.isVip;
-            updatePreview();
-            document.getElementById('movieModal').classList.remove('hidden');
-        }
-        async function deleteMovie(id) { if(confirm('ต้องการลบซีรีส์เรื่องนี้จริงหรือไม่?')) { await fetch(`${API_URL}/movies/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` } }); loadMovies(); } }
-        
-        function searchAdmin() {
-            const searchTerm = document.getElementById('adminSearch').value.toLowerCase().trim();
-            const filteredMovies = allMovies.filter(movie => movie.title.toLowerCase().includes(searchTerm));
-            renderTable(filteredMovies);
+        function uploadWithProgress(formData, id) {
+            const xhr = new XMLHttpRequest();
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const submitButton = document.querySelector('#movieForm button[type="submit"]');
+
+            xhr.open(id ? 'PUT' : 'POST', id ? `${API_URL}/movies/${id}` : `${API_URL}/movies`, true);
+            xhr.setRequestHeader('Authorization', `Bearer ${localStorage.getItem('accessToken')}`);
+
+            xhr.upload.addEventListener('progress', e => {
+                if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressText.innerText = `อัปโหลด ${percent}%`;
+                }
+            });
+
+            xhr.onload = () => {
+                progressContainer.classList.add('hidden');
+                submitButton.disabled = false;
+                submitButton.innerText = 'บันทึก';
+                if (xhr.status === 401) {
+                    showToast('เซสชั่นหมดอายุ, กรุณาล็อกอินใหม่', 'error');
+                    setTimeout(logout, 2000);
+                    return;
+                }
+                if (xhr.status === 200 || xhr.status === 201) {
+                    closeModal();
+                    showToast('อัปโหลดและบันทึกข้อมูลสำเร็จ', 'success');
+                    loadMovies(id ? currentPage : 1, currentSearchQuery);
+                } else { showToast(`เกิดข้อผิดพลาด: ${xhr.statusText}`, 'error'); }
+            };
+
+            submitButton.innerText = 'กำลังอัปโหลด...';
+            progressContainer.classList.remove('hidden');
+            progressText.innerText = '';
+            progressBar.style.width = '0%';
+            xhr.send(formData);
         }
 
-        loadMovies();
+        // UI Helpers
+        function openModal() { 
+            document.getElementById('movieForm').reset(); 
+            document.getElementById('movieId').value = ''; 
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-circle-plus text-sky-500"></i> เพิ่มข้อมูลซีรีส์';
+            updatePreview(); 
+            document.getElementById('progressContainer').classList.add('hidden');
+            document.getElementById('movieModal').classList.remove('hidden'); 
+        }
+        function closeModal() { document.getElementById('movieModal').classList.add('hidden'); }
+
+        document.getElementById('posterFile').addEventListener('change', () => {
+            document.getElementById('posterUrl').value = '';
+            updatePreview();
+        });
+
+        function handleUrlInput() {
+            document.getElementById('posterFile').value = '';
+            updatePreview();
+        }
+
+        function updatePreview(url = null) {
+            const file = document.getElementById('posterFile').files[0];
+            const urlValue = url || document.getElementById('posterUrl').value;
+            const img = document.getElementById('posterPreview');
+            const placeholder = document.getElementById('posterPlaceholder');
+
+            if (file) {
+                img.src = URL.createObjectURL(file);
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else if (urlValue) {
+                img.src = urlValue;
+                img.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+            } else {
+                img.src = '';
+                img.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+            }
+        }
+
+        function updateStats(stats) {
+            // ข้อมูลสถิติควรมาจาก API โดยตรงเพื่อความถูกต้องเมื่อใช้ pagination
+            document.getElementById('statTotal').innerText = stats?.total ?? 'N/A';
+            document.getElementById('statVip').innerText = stats?.vip ?? 'N/A';
+        }
+
+        async function editMovie(id) {
+            openModal(); // Reset form and open modal
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-sky-500"></i> กำลังโหลด...';
+            try {
+                const res = await secureFetch(`${API_URL}/movies/${id}`);
+                if (!res.ok) throw new Error('ไม่พบข้อมูลหนัง');
+                const json = await res.json();
+                const m = json.data;
+
+                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-sky-500"></i> แก้ไขข้อมูลซีรีส์';
+                document.getElementById('movieId').value = m._id;
+                document.getElementById('title').value = m.title;
+                document.getElementById('year').value = m.year;
+                document.getElementById('rating').value = m.rating;
+                document.getElementById('ytId').value = m.ytId;
+                document.getElementById('posterUrl').value = m.posterUrl;
+                document.getElementById('category').value = m.category;
+                document.getElementById('totalEpisodes').value = m.totalEpisodes;
+                document.getElementById('description').value = m.description;
+                document.getElementById('isVip').checked = m.isVip;
+                updatePreview(m.posterUrl);
+            } catch (err) {
+                closeModal();
+                if (err.message !== 'Unauthorized') {
+                    showToast(err.message || 'ไม่สามารถโหลดข้อมูลสำหรับแก้ไขได้', 'error');
+                }
+            }
+        }
+
+        async function deleteMovie(id) { 
+            if(confirm('ต้องการลบซีรีส์เรื่องนี้จริงหรือไม่?')) { 
+                try {
+                    const res = await secureFetch(`${API_URL}/movies/${id}`, { method: 'DELETE' }); 
+                    if (!res.ok) throw new Error('ลบข้อมูลไม่สำเร็จ');
+                    showToast('ลบข้อมูลสำเร็จ', 'success');
+                    loadMovies(currentPage, currentSearchQuery); 
+                } catch (err) {
+                    if (err.message !== 'Unauthorized') {
+                        showToast('เกิดข้อผิดพลาดในการลบ', 'error');
+                    }
+                }
+            } 
+        }
+        
+        function searchAdmin() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                currentSearchQuery = document.getElementById('adminSearch').value.trim();
+                loadMovies(1, currentSearchQuery); // ค้นหาใหม่ให้เริ่มที่หน้า 1
+            }, 500); // Debounce 500ms
+        }
+
+        function renderPagination(page, totalPages) {
+            const container = document.getElementById('paginationControls');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            let buttons = '';
+            // Previous Button
+            buttons += `<button onclick="loadMovies(${page - 1}, '${currentSearchQuery}')" class="px-3 py-1 rounded-md ${page === 1 ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 hover:bg-sky-600'}" ${page === 1 ? 'disabled' : ''}>&laquo; ก่อนหน้า</button>`;
+            
+            // Page Info
+            buttons += `<span class="px-3 py-1 text-slate-400">หน้า ${page} / ${totalPages}</span>`;
+
+            // Next Button
+            buttons += `<button onclick="loadMovies(${page + 1}, '${currentSearchQuery}')" class="px-3 py-1 rounded-md ${page >= totalPages ? 'bg-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-700 hover:bg-sky-600'}" ${page >= totalPages ? 'disabled' : ''}>ต่อไป &raquo;</button>`;
+            
+            container.innerHTML = buttons;
+        }
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMovies(1);
+        });
     </script>
 </body>
 </html>
