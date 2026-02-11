@@ -1,0 +1,11 @@
+{
+  "name": "duydodee-project",
+  "version": "1.0.0",
+  "description": "Root script to run the project",
+  "scripts": {
+    "install-all": "cd server && npm install",
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev"
+  },
+  "license": "ISC"
+}

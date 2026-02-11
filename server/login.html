@@ -19,7 +19,7 @@
     <script>
         // ถ้ามี Token อยู่แล้ว ให้เด้งไปหน้า admin ทันที
         if (localStorage.getItem('accessToken')) {
-            window.location.href = '/admin.html';
+            window.location.href = 'admin.html';
         }
     </script>
 
@@ -91,7 +91,8 @@
 
                 const data = await res.json();
                 localStorage.setItem('accessToken', data.accessToken);
-                window.location.href = '/admin.html';
+                localStorage.setItem('userRole', data.role);
+                window.location.href = 'admin.html';
 
             } catch (err) {
                 errorMessage.innerText = err.message;

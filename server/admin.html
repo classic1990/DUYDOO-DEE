@@ -23,7 +23,7 @@
         // ตรวจสอบ Token ทันทีที่หน้าโหลด
         if (!localStorage.getItem('accessToken')) {
             // ถ้าไม่มี Token ให้เด้งไปหน้า login (สมมติว่าชื่อ login.html)
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
     </script>
 
@@ -36,8 +36,11 @@
                 <a href="#" class="flex items-center gap-3 px-4 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-900/20">
                     <i class="fa-solid fa-film"></i> จัดการซีรีส์
                 </a>
-                <a href="/client/index.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
+                <a href="/" target="_blank" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
                     <i class="fa-solid fa-eye"></i> ดูหน้าเว็บหลัก
+                </a>
+                <a href="logs.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าสู่ระบบ
                 </a>
             </nav>
             <nav class="mt-auto pt-10">
@@ -243,7 +246,7 @@
         function logout() {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('userRole');
-            window.location.href = '/login.html';
+            window.location.href = 'login.html';
         }
 
         // 1. โหลดข้อมูลทั้งหมด
