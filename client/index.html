@@ -1,49 +1,223 @@
---- d:\DUYDO-DEE\DUYDOO-DEE\client\index.html
-+++ d:\DUYDO-DEE\DUYDOO-DEE\client\index.html
-@@ -107,7 +107,7 @@
-             const grid = document.getElementById('movieGrid');
-             grid.innerHTML = movies.map(m => `
-                 <div class="bg-slate-800/40 rounded-xl overflow-hidden border border-slate-800 hover:border-sky-500/50 transition-all group cursor-pointer" 
--                     onclick="openPlayer('${m.ytId}', '${m.title}', '${m.description || ''}', '', '', '${m.rating}', '${m.year}')">
-+                     onclick="openPlayer('${m.ytId}', '${escapeJsArg(m.title)}', '${escapeJsArg(m.description || '')}', '${escapeJsArg(m.lessons || '')}', '${escapeJsArg(m.actors || '')}', '${m.rating}', '${m.year}')">
-                     <div class="aspect-[2/3] relative overflow-hidden">
-                         <img src="${m.posterUrl}" class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition">
-@@ -125,13 +125,36 @@
-             `).join('');
-         }
- 
-+        function escapeJsArg(text) {
-+            if (!text) return '';
-+            return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, "&quot;").replace(/\n/g, ' ');
-+        }
-+
-+        function escapeHtml(text) {
-+            if (!text) return '';
-+            return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;").replace(/\n/g, ' ');
-+        }
-+
-         function openPlayer(ytId, title, desc, lessons, actors, rating, year) {
-             document.getElementById('homeView').classList.add('hidden');
-             document.getElementById('playerView').classList.remove('hidden');
-             document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${ytId}?autoplay=1`;
-             document.getElementById('playerTitle').innerText = title;
-             document.getElementById('playerYear').innerText = year;
-             document.getElementById('playerRating').innerText = rating;
--            document.getElementById('playerDesc').innerText = desc;
-+            
-+            let htmlContent = '';
-+            if (actors) {
-+                htmlContent += `<div class="mb-3 text-sky-400 font-bold text-base"><i class="fa-solid fa-user-group mr-2"></i>นักแสดง: <span class="text-slate-200 font-normal">${escapeHtml(actors)}</span></div>`;
-+            }
-+            
-+            htmlContent += `<p class="mb-4">${escapeHtml(desc)}</p>`;
-+            
-+            if (lessons) {
-+                htmlContent += `<div class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-yellow-200 text-sm"><i class="fa-solid fa-lightbulb text-yellow-400 mr-2"></i>ข้อคิด: ${escapeHtml(lessons)}</div>`;
-+            }
-+            
-+            document.getElementById('playerDesc').innerHTML = htmlContent;
-+            
-             window.scrollTo(0,0);
-         }
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUYDODEE 4K - ดูซีรีส์จีนพากย์ไทย พรีเมียม</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .vip-badge { background: linear-gradient(to right, #eab308, #ca8a04); color: #000; font-weight: 900; }
+    </style>
+</head>
+<body class="custom-scrollbar min-h-screen flex flex-col">
+
+    <header class="sticky top-0 z-50 glass-panel">
+        <div class="container mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <a href="#" onclick="filterCategory('all')" class="text-2xl font-bold text-sky-500 flex items-center gap-1">
+                    <i class="fa-solid fa-play-circle"></i> DUYDODEE<span class="text-white">4K</span>
+                </a>
+                <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
+                    <a href="#" onclick="filterCategory('all')" class="hover:text-sky-400 transition">หน้าแรก</a>
+                    <a href="#" onclick="filterCategory('china')" class="hover:text-sky-400 transition">ซีรีส์จีน</a>
+                    <a href="#" onclick="filterCategory('inter')" class="hover:text-sky-400 transition">พากย์ไทย</a>
+                </nav>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="relative hidden sm:block">
+                    <input type="text" id="searchInput" oninput="searchMovies()" placeholder="ค้นหาซีรีส์..." class="bg-slate-800/50 border border-slate-700 rounded-full py-1.5 px-4 pl-10 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sky-500 transition-all">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                </div>
+                <button id="adminBtn" onclick="switchView('admin')" class="hidden text-slate-400 hover:text-white bg-slate-800/50 p-2 rounded-full transition"><i class="fa-solid fa-gear"></i></button>
+                <div id="authSection">
+                    <button onclick="openLoginModal()" class="bg-sky-600 hover:bg-sky-500 px-5 py-1.5 rounded-full text-sm font-semibold transition">เข้าสู่ระบบ VIP</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex flex-col lg:flex-row container mx-auto px-4 py-6 gap-8">
+        <aside class="hidden lg:block w-60 flex-shrink-0">
+            <div class="sticky top-24 space-y-8">
+                <div>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">เมนู</h3>
+                    <div class="space-y-1">
+                        <a href="#" onclick="filterCategory('all')" class="flex items-center gap-3 px-4 py-3 bg-slate-800/50 text-sky-400 rounded-xl font-medium border-l-4 border-sky-500"><i class="fa-solid fa-house"></i> หน้าแรก</a>
+                        <a href="#" onclick="filterCategory('china')" class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i class="fa-solid fa-earth-asia"></i> ซีรีส์จีน</a>
+                        <a href="#" onclick="filterCategory('inter')" class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i class="fa-solid fa-earth-americas"></i> ฝรั่ง</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 min-w-0">
+            <div id="homeView" class="animate-fade-in">
+                <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span class="w-1.5 h-6 bg-sky-500 rounded-full"></span> อัปเดตล่าสุด</h2>
+                <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+            </div>
+
+            <div id="playerView" class="hidden animate-fade-in">
+                <div id="playerBackdrop" class="fixed inset-0 z-[-1] opacity-20 bg-cover bg-center blur-3xl transition-all duration-700"></div>
+                <button onclick="switchView('home')" class="text-slate-400 hover:text-white flex items-center gap-2 text-sm mb-6 px-4 py-2 rounded-lg hover:bg-slate-800 transition"><i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</button>
+                <div class="bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-700 aspect-video mb-8">
+                    <iframe id="mainPlayer" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
+                </div>
+                <div class="flex flex-col xl:flex-row gap-8 pb-10">
+                    <div class="flex-1">
+                        <div class="flex gap-6">
+                            <img id="playerPoster" src="" class="w-32 md:w-44 rounded-xl border border-slate-700 object-cover aspect-[2/3]">
+                            <div>
+                                <h1 id="playerTitle" class="text-2xl md:text-4xl font-bold text-white mb-3"></h1>
+                                <div class="flex gap-3 mb-4 text-xs font-medium text-slate-300">
+                                    <span id="playerYear" class="bg-slate-800 px-2 py-1 rounded"></span>
+                                    <span class="text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded border border-yellow-400/20"><i class="fa-solid fa-star"></i> <span id="playerRating"></span></span>
+                                </div>
+                                <div id="playerDesc" class="text-slate-400 text-sm leading-relaxed"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="episodeSelector" class="w-full xl:w-80 hidden">
+                        <div class="glass-panel p-6 rounded-2xl">
+                            <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-list-ol text-sky-500"></i> เลือกตอน (<span id="totalEpDisplay"></span>)</h3>
+                            <div id="episodeList" class="grid grid-cols-4 gap-2"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="loginModal" class="fixed inset-0 bg-black/90 z-[60] hidden flex items-center justify-center p-4">
+        <div class="glass-panel w-full max-w-sm p-8 rounded-2xl text-center">
+            <h3 class="text-2xl font-bold text-white mb-6">VIP LOGIN</h3>
+            <form id="loginForm" class="space-y-4">
+                <input type="text" id="u" placeholder="Username" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
+                <input type="password" id="p" placeholder="Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
+                <button class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl mt-4 transition">เข้าสู่ระบบ VIP</button>
+            </form>
+            <button onclick="closeLoginModal()" class="mt-4 text-slate-500 text-sm hover:text-white">ยกเลิก</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:5000/api';
+        let allMovies = [];
+
+        document.addEventListener('DOMContentLoaded', () => { loadMovies(); checkAuth(); });
+
+        async function loadMovies() {
+            try {
+                const res = await fetch(`${API_URL}/movies`);
+                const json = await res.json();
+                if (json.success) {
+                    allMovies = json.data;
+                    renderMovies(allMovies);
+                }
+            } catch (err) { console.error("API Error", err); }
+        }
+
+        function renderMovies(movies) {
+            const grid = document.getElementById('movieGrid');
+            if (!movies.length) { grid.innerHTML = '<div class="col-span-full py-20 text-slate-600 text-center">ไม่พบข้อมูลซีรีส์</div>'; return; }
+            grid.innerHTML = movies.map(m => `
+                <div class="group bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-sky-500 transition duration-300 cursor-pointer" onclick="openPlayer('${m._id}')">
+                    <div class="aspect-[2/3] relative">
+// เปลี่ยนจากแบบเดิม เป็นแบบนี้
+onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'"
+                        ${m.isVip ? '<div class="absolute top-2 left-2 vip-badge text-[10px] px-2 py-0.5 rounded shadow-lg">VIP</div>' : ''}
+                    </div>
+                    <div class="p-3">
+                        <h3 class="text-white font-medium truncate text-sm">${m.title}</h3>
+                        <div class="flex justify-between mt-1 text-[10px] text-slate-500"><span>${m.year}</span><span class="text-yellow-500">⭐ ${m.rating}</span></div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterCategory(cat) {
+            if (cat === 'all') renderMovies(allMovies);
+            else renderMovies(allMovies.filter(m => m.category === cat));
+            switchView('home');
+        }
+
+        function openPlayer(id) {
+            const m = allMovies.find(item => item._id === id);
+            const isVipUser = localStorage.getItem('userStatus') === 'VIP' || localStorage.getItem('userRole') === 'admin';
+            
+            if (m.isVip && !isVipUser) { alert('🔒 เนื้อหานี้สำหรับสมาชิก VIP เท่านั้น'); openLoginModal(); return; }
+
+            document.getElementById('homeView').classList.add('hidden');
+            document.getElementById('playerView').classList.remove('hidden');
+            document.getElementById('playerTitle').innerText = m.title;
+            document.getElementById('playerYear').innerText = m.year;
+            document.getElementById('playerRating').innerText = m.rating;
+            document.getElementById('playerPoster').src = m.posterUrl;
+            document.getElementById('playerDesc').innerText = m.description || 'ไม่มีข้อมูลเรื่องย่อ';
+            document.getElementById('playerBackdrop').style.backgroundImage = `url('${m.posterUrl}')`;
+
+            const total = m.totalEpisodes || 1;
+            document.getElementById('episodeSelector').classList.toggle('hidden', total <= 1);
+            document.getElementById('totalEpDisplay').innerText = total;
+            
+            let epHtml = '';
+            for(let i=1; i<=total; i++) epHtml += `<button id="ep-btn-${i}" onclick="changeEp('${m.ytId}', ${i}, ${total})" class="py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs hover:bg-sky-600 transition">${i}</button>`;
+            document.getElementById('episodeList').innerHTML = epHtml;
+            changeEp(m.ytId, 1, total);
+            window.scrollTo(0,0);
+        }
+
+        function changeEp(id, n, t) {
+            document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
+            for(let i=1; i<=t; i++) {
+                const b = document.getElementById(`ep-btn-${i}`);
+                if(b) b.className = i===n ? "py-2 bg-sky-600 text-white rounded font-bold text-xs" : "py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs text-slate-500";
+            }
+        }
+
+        function switchView(v) {
+            document.getElementById('homeView').classList.add('hidden');
+            document.getElementById('playerView').classList.add('hidden');
+            document.getElementById(v + 'View').classList.remove('hidden');
+            if(v !== 'player') document.getElementById('mainPlayer').src = '';
+        }
+
+        function searchMovies() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            renderMovies(allMovies.filter(m => m.title.toLowerCase().includes(q)));
+        }
+
+        function checkAuth() {
+            const role = localStorage.getItem('userRole');
+            const status = localStorage.getItem('userStatus');
+            if (role === 'admin' || status === 'VIP') {
+                document.getElementById('authSection').innerHTML = `<span class="text-yellow-500 font-bold mr-4">${role === 'admin' ? 'ADMIN' : 'VIP MEMBER'}</span><button onclick="logout()" class="text-xs text-slate-500 hover:text-white">ออกจากระบบ</button>`;
+                if (role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
+            }
+        }
+
+        document.getElementById('loginForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username:document.getElementById('u').value, password:document.getElementById('p').value}) });
+            const d = await res.json();
+            if(d.success) {
+                localStorage.setItem('accessToken', d.accessToken);
+                localStorage.setItem('userRole', d.role);
+                if(d.role === 'vip' || d.username === 'vipuser') localStorage.setItem('userStatus', 'VIP'); // ตัวอย่างการเซต VIP
+                location.reload();
+            } else { alert('ล็อกอินไม่สำเร็จ'); }
+        }
+
+        function logout() { localStorage.clear(); location.reload(); }
+        function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+        function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+    </script>
+</body>
+</html>
