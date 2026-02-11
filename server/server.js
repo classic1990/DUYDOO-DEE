@@ -183,11 +183,14 @@ apiRouter.post('/fetch-movie-data', authenticateToken, authorizeAdmin, async (re
         if (!ytRes.data.items?.length) return res.status(404).json({ success: false, message: 'ไม่พบวิดีโอ' });
 
         const snippet = ytRes.data.items[0].snippet;
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-1.5-flash",
+            generationConfig: { responseMimeType: "application/json" }
+        });
         const prompt = `สรุปข้อมูลหนังจากชื่อ "${snippet.title}" และเนื้อหา "${snippet.description}" ตอบเป็น JSON: { "title": "ชื่อไทย", "year": 2024, "rating": 9.0, "description": "เรื่องย่อ", "actors": "ชื่อนักแสดง", "lessons": "ข้อคิด" }`;
 
         const result = await model.generateContent(prompt);
-        const aiData = JSON.parse(result.response.text().replace(/```json|```/g, "").trim());
+        const aiData = JSON.parse(result.response.text());
 
         res.json({
             success: true,
@@ -258,8 +261,14 @@ apiRouter.post('/comments', async (req, res) => {
 
 app.use('/api', apiRouter);
 
+// --- Global Error Handler ---
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์', error: err.message });
+});
+
 // --- Helper Functions ---
-const seedAdminUser = async () => {
+async function seedAdminUser() {
     try {
         const adminExists = await User.findOne({ role: 'admin' });
         if (!adminExists) {
