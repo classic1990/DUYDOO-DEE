@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "server/server.js", "use": "@vercel/node" },
+    { "src": "client/**", "use": "@vercel/static" }
+  ],
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "server/server.js" },
+    { "source": "/(.*)", "destination": "client/$1" }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/daily-summary",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/backup-email",
+      "schedule": "0 0 * * 1"
+    }
+  ]
+}

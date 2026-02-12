@@ -15,9 +15,25 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .vip-badge { background: linear-gradient(to right, #eab308, #ca8a04); color: #000; font-weight: 900; }
+        
+        /* Marquee Animation */
+        .marquee-container { overflow: hidden; white-space: nowrap; position: relative; }
+        .marquee-content { display: inline-block; padding-left: 100%; animation: marquee 20s linear infinite; }
+        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
     </style>
 </head>
 <body class="custom-scrollbar min-h-screen flex flex-col">
+
+    <!-- Announcement Bar -->
+    <div id="announcementBar" class="text-white text-sm py-2 hidden relative z-[60]">
+        <div class="container mx-auto px-4 flex items-center">
+            <div id="announcementBadge" class="px-2 py-0.5 rounded text-xs font-bold mr-3 uppercase tracking-wider shrink-0">ประกาศ</div>
+            <div class="marquee-container w-full">
+                <div id="announcementText" class="marquee-content font-medium"></div>
+            </div>
+            <button onclick="document.getElementById('announcementBar').remove()" class="ml-4 hover:text-slate-200 shrink-0"><i class="fa-solid fa-times"></i></button>
+        </div>
+    </div>
 
     <header class="sticky top-0 z-50 glass-panel">
         <div class="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -60,6 +76,11 @@
 
         <main class="flex-1 min-w-0">
             <div id="homeView" class="animate-fade-in">
+                <div id="trendingSection" class="hidden mb-10">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span class="w-1.5 h-6 bg-red-500 rounded-full"></span> ซีรีส์ยอดนิยม 🔥</h2>
+                    <div id="trendingGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+                </div>
+
                 <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span class="w-1.5 h-6 bg-sky-500 rounded-full"></span> อัปเดตล่าสุด</h2>
                 <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
             </div>
@@ -108,10 +129,10 @@
     </div>
 
     <script>
-        const API_URL = 'http://localhost:5000/api';
+        const API_URL = '/api';
         let allMovies = [];
 
-        document.addEventListener('DOMContentLoaded', () => { loadMovies(); checkAuth(); });
+        document.addEventListener('DOMContentLoaded', () => { loadMovies(); checkAuth(); loadAnnouncement(); });
 
         async function loadMovies() {
             try {
@@ -119,19 +140,57 @@
                 const json = await res.json();
                 if (json.success) {
                     allMovies = json.data;
-                    renderMovies(allMovies);
+                    
+                    // Trending Logic: Top 5 rated movies
+                    const trendingMovies = [...allMovies].sort((a, b) => b.rating - a.rating).slice(0, 5);
+                    
+                    if (trendingMovies.length > 0) {
+                        document.getElementById('trendingSection').classList.remove('hidden');
+                        renderMovies(trendingMovies, 'trendingGrid');
+                    }
+                    
+                    renderMovies(allMovies, 'movieGrid');
                 }
             } catch (err) { console.error("API Error", err); }
         }
 
-        function renderMovies(movies) {
-            const grid = document.getElementById('movieGrid');
-            if (!movies.length) { grid.innerHTML = '<div class="col-span-full py-20 text-slate-600 text-center">ไม่พบข้อมูลซีรีส์</div>'; return; }
+        async function loadAnnouncement() {
+            try {
+                const res = await fetch(`${API_URL}/announcement`);
+                const json = await res.json();
+                if (json.success && json.data.isActive && json.data.text) {
+                    const bar = document.getElementById('announcementBar');
+                    const badge = document.getElementById('announcementBadge');
+                    const color = json.data.color || 'orange';
+
+                    // Color Mapping
+                    const colors = {
+                        orange: ['bg-orange-600', 'bg-orange-700'],
+                        red: ['bg-red-600', 'bg-red-700'],
+                        green: ['bg-green-600', 'bg-green-700'],
+                        blue: ['bg-blue-600', 'bg-blue-700']
+                    };
+                    const [bgBar, bgBadge] = colors[color] || colors.orange;
+
+                    bar.className = `${bgBar} text-white text-sm py-2 relative z-[60]`;
+                    badge.className = `${bgBadge} px-2 py-0.5 rounded text-xs font-bold mr-3 uppercase tracking-wider shrink-0`;
+                    document.getElementById('announcementText').innerText = json.data.text;
+                    bar.classList.remove('hidden');
+                }
+            } catch (err) { console.error("Announcement Error", err); }
+        }
+
+        function renderMovies(movies, containerId = 'movieGrid') {
+            const grid = document.getElementById(containerId);
+            if (!grid) return;
+            if (!movies.length) { 
+                if (containerId === 'movieGrid') grid.innerHTML = '<div class="col-span-full py-20 text-slate-600 text-center">ไม่พบข้อมูลซีรีส์</div>'; 
+                return; 
+            }
             grid.innerHTML = movies.map(m => `
                 <div class="group bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-sky-500 transition duration-300 cursor-pointer" onclick="openPlayer('${m._id}')">
                     <div class="aspect-[2/3] relative">
-// เปลี่ยนจากแบบเดิม เป็นแบบนี้
-onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'"
+                        <img src="${m.posterUrl}" class="w-full h-full object-cover transition duration-500 group-hover:scale-110" onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'">
                         ${m.isVip ? '<div class="absolute top-2 left-2 vip-badge text-[10px] px-2 py-0.5 rounded shadow-lg">VIP</div>' : ''}
                     </div>
                     <div class="p-3">
@@ -143,9 +202,24 @@ onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image
         }
 
         function filterCategory(cat) {
-            if (cat === 'all') renderMovies(allMovies);
-            else renderMovies(allMovies.filter(m => m.category === cat));
+            const trendingSection = document.getElementById('trendingSection');
+            if (cat === 'all') {
+                if (trendingSection) trendingSection.classList.remove('hidden');
+                renderMovies(allMovies, 'movieGrid');
+            } else {
+                if (trendingSection) trendingSection.classList.add('hidden');
+                renderMovies(allMovies.filter(m => m.category === cat), 'movieGrid');
+            }
             switchView('home');
+
+            // เลื่อนหน้าจอลงมาที่ส่วนแสดงรายการหนังอัตโนมัติ
+            setTimeout(() => {
+                const section = document.getElementById('homeView');
+                if(section) {
+                    const y = section.getBoundingClientRect().top + window.scrollY - 80; // -80 เพื่อเผื่อพื้นที่ Header ด้านบน
+                    window.scrollTo({top: y, behavior: 'smooth'});
+                }
+            }, 100);
         }
 
         function openPlayer(id) {
@@ -191,14 +265,30 @@ onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image
 
         function searchMovies() {
             const q = document.getElementById('searchInput').value.toLowerCase();
-            renderMovies(allMovies.filter(m => m.title.toLowerCase().includes(q)));
+            const trendingSection = document.getElementById('trendingSection');
+            if (q) {
+                if (trendingSection) trendingSection.classList.add('hidden');
+            } else {
+                if (trendingSection) trendingSection.classList.remove('hidden');
+            }
+            renderMovies(allMovies.filter(m => m.title.toLowerCase().includes(q)), 'movieGrid');
         }
 
         function checkAuth() {
-            const role = localStorage.getItem('userRole');
-            const status = localStorage.getItem('userStatus');
-            if (role === 'admin' || status === 'VIP') {
-                document.getElementById('authSection').innerHTML = `<span class="text-yellow-500 font-bold mr-4">${role === 'admin' ? 'ADMIN' : 'VIP MEMBER'}</span><button onclick="logout()" class="text-xs text-slate-500 hover:text-white">ออกจากระบบ</button>`;
+            const role = localStorage.getItem('userRole') || sessionStorage.getItem('userRole');
+            const status = localStorage.getItem('userStatus') || sessionStorage.getItem('userStatus');
+            const username = localStorage.getItem('username') || sessionStorage.getItem('username');
+
+            if (username) {
+                const isVip = role === 'vip' || status === 'VIP';
+                const vipBadge = isVip ? '<i class="fa-solid fa-crown text-yellow-400 ml-1 text-xs drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]"></i>' : '';
+
+                document.getElementById('authSection').innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="text-right hidden sm:block leading-tight"><div class="text-[10px] text-slate-400">สวัสดี</div><div class="text-sm font-bold text-sky-400">${username} ${vipBadge}</div></div>
+                        <span class="text-[10px] px-2 py-0.5 rounded ${role === 'admin' ? 'bg-red-500/20 text-red-400' : (isVip ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700 text-slate-400')} font-bold uppercase">${role === 'admin' ? 'ADMIN' : (isVip ? 'VIP' : 'MEMBER')}</span>
+                        <button onclick="logout()" class="bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 w-8 h-8 rounded-full transition flex items-center justify-center" title="ออกจากระบบ"><i class="fa-solid fa-power-off text-xs"></i></button>
+                    </div>`;
                 if (role === 'admin') document.getElementById('adminBtn').classList.remove('hidden');
             }
         }
@@ -210,12 +300,13 @@ onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image
             if(d.success) {
                 localStorage.setItem('accessToken', d.accessToken);
                 localStorage.setItem('userRole', d.role);
+                localStorage.setItem('username', d.username || document.getElementById('u').value);
                 if(d.role === 'vip' || d.username === 'vipuser') localStorage.setItem('userStatus', 'VIP'); // ตัวอย่างการเซต VIP
                 location.reload();
             } else { alert('ล็อกอินไม่สำเร็จ'); }
         }
 
-        function logout() { localStorage.clear(); location.reload(); }
+        function logout() { localStorage.clear(); sessionStorage.clear(); location.reload(); }
         function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
         function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
     </script>

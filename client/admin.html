@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUYDODEE 4K - Master Admin System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Kanit', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        input, select, textarea { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
+        input:focus { border-color: #0ea5e9 !important; ring: 2px #0ea5e9; }
+    </style>
+</head>
+<body class="custom-scrollbar min-h-screen">
+
+    <div class="flex flex-col md:flex-row">
+        <aside class="w-full md:w-64 md:h-screen sticky top-0 bg-slate-950 p-6 border-r border-slate-800">
+            <div class="text-2xl font-bold text-sky-500 mb-10 flex items-center gap-2">
+                <i class="fa-solid fa-screwdriver-wrench"></i> ADMIN<span class="text-white">4K</span>
+            </div>
+            <nav class="space-y-2">
+                <button onclick="showSection('movies')" id="nav-movies" class="w-full flex items-center gap-3 px-4 py-3 bg-sky-600 text-white rounded-xl font-bold shadow-lg shadow-sky-900/20 transition text-left">
+                    <i class="fa-solid fa-film"></i> จัดการซีรีส์
+                </button>
+                <button onclick="showSection('users')" id="nav-users" class="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition text-left">
+                    <i class="fa-solid fa-users"></i> จัดการผู้ใช้งาน
+                </button>
+                <button onclick="showSection('announcement')" id="nav-announcement" class="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition text-left">
+                    <i class="fa-solid fa-bullhorn"></i> จัดการประกาศ
+                </button>
+                <a href="logs.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการเข้าสู่ระบบ
+                </a>
+                <a href="index.html" class="flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition">
+                    <i class="fa-solid fa-eye"></i> ดูหน้าเว็บหลัก
+                </a>
+                <button onclick="openPasswordModal()" class="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:bg-slate-900 rounded-xl transition text-left">
+                    <i class="fa-solid fa-key"></i> เปลี่ยนรหัสผ่าน
+                </button>
+                <button onclick="backupDatabase()" class="w-full flex items-center gap-3 px-4 py-3 text-emerald-400 hover:bg-slate-900 hover:text-emerald-300 rounded-xl transition text-left">
+                    <i class="fa-solid fa-download"></i> สำรองข้อมูล (Backup)
+                </button>
+                <button onclick="triggerRestore()" class="w-full flex items-center gap-3 px-4 py-3 text-orange-400 hover:bg-slate-900 hover:text-orange-300 rounded-xl transition text-left">
+                    <i class="fa-solid fa-upload"></i> กู้คืนข้อมูล (Restore)
+                </button>
+                <input type="file" id="restoreFile" accept=".json" class="hidden" onchange="restoreDatabase(this)">
+                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-slate-900 hover:text-red-300 rounded-xl transition text-left">
+                    <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+                </button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 p-4 md:p-10">
+            <!-- Header Section: แสดงชื่อ Admin -->
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-white">Dashboard ภาพรวม</h2>
+                    <p class="text-slate-400 text-sm">ยินดีต้อนรับ, <span id="adminNameDisplay" class="text-sky-400 font-bold">Admin</span></p>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-sky-600/20 border border-sky-500/30 flex items-center justify-center text-sky-400 shadow-lg shadow-sky-500/10">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+            </div>
+
+            <!-- Movies Section -->
+            <div id="moviesSection">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="glass p-6 rounded-2xl border-l-4 border-sky-500">
+                    <p class="text-slate-500 text-xs uppercase font-bold tracking-widest">ซีรีส์ทั้งหมด</p>
+                    <h3 class="text-3xl font-bold mt-1" id="statTotal">0</h3>
+                </div>
+                <div class="glass p-6 rounded-2xl border-l-4 border-yellow-500">
+                    <p class="text-slate-500 text-xs uppercase font-bold tracking-widest">เรื่องที่เป็น VIP</p>
+                    <h3 class="text-3xl font-bold mt-1" id="statVip">0</h3>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="openModal()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-4 rounded-2xl transition shadow-xl shadow-sky-900/40 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> เพิ่มซีรีส์ใหม่
+                    </button>
+                    <button onclick="openBatchModal()" class="w-full ml-4 bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-2xl transition shadow-xl shadow-purple-900/40 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-layer-group"></i> Batch Import
+                    </button>
+                </div>
+            </div>
+
+                <div class="glass rounded-2xl overflow-hidden shadow-2xl">
+                <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                    <h2 class="font-bold text-lg">รายการซีรีส์ในระบบ</h2>
+                    <input type="text" oninput="searchAdmin()" id="adminSearch" placeholder="ค้นหาซีรีส์..." class="px-4 py-2 rounded-lg text-sm w-64">
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-900/50 text-xs text-slate-400 uppercase">
+                            <tr>
+                                <th class="p-4">ปก</th>
+                                <th class="p-4">ชื่อเรื่อง</th>
+                                <th class="p-4">หมวดหมู่</th>
+                                <th class="p-4">สิทธิ์</th>
+                                <th class="p-4 text-right">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
+                    </table>
+                </div>
+            </div>
+            </div>
+
+            <!-- Users Section -->
+            <div id="usersSection" class="hidden">
+                <div class="glass rounded-2xl overflow-hidden shadow-2xl">
+                    <div class="p-6 border-b border-slate-800 flex justify-between items-center">
+                        <h2 class="font-bold text-lg">รายชื่อผู้ใช้งาน</h2>
+                        <div class="flex gap-2">
+                            <input type="text" oninput="searchUsers()" id="userSearch" placeholder="ค้นหาผู้ใช้..." class="px-4 py-2 rounded-lg text-sm w-48 bg-slate-900 border border-slate-700 text-white">
+                            <button onclick="loadUsers()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-900/50 text-xs text-slate-400 uppercase">
+                                <tr>
+                                    <th class="p-4">Username</th>
+                                    <th class="p-4">Role</th>
+                                    <th class="p-4">วันที่สมัคร</th>
+                                    <th class="p-4 text-right">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersTableBody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Announcement Section -->
+            <div id="announcementSection" class="hidden">
+                <div class="glass p-8 rounded-2xl max-w-2xl mx-auto">
+                    <h2 class="text-2xl font-bold text-white mb-6 flex items-center gap-2"><i class="fa-solid fa-bullhorn text-orange-500"></i> จัดการประกาศข่าวสาร</h2>
+                    <form id="announcementForm" class="space-y-6">
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-2">ข้อความประกาศ</label>
+                            <textarea id="annText" rows="3" class="w-full px-4 py-3 rounded-xl text-white bg-slate-900 border border-slate-700 focus:border-orange-500 outline-none transition" placeholder="พิมพ์ข้อความที่ต้องการประกาศ..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-slate-400 mb-2">เลือกสีแถบประกาศ</label>
+                            <div class="flex gap-4">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="annColor" value="orange" class="peer sr-only" checked>
+                                    <div class="w-10 h-10 rounded-full bg-orange-600 border-2 border-transparent peer-checked:border-white peer-checked:ring-2 peer-checked:ring-orange-500 transition shadow-lg shadow-orange-900/50"></div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="annColor" value="red" class="peer sr-only">
+                                    <div class="w-10 h-10 rounded-full bg-red-600 border-2 border-transparent peer-checked:border-white peer-checked:ring-2 peer-checked:ring-red-500 transition shadow-lg shadow-red-900/50"></div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="annColor" value="green" class="peer sr-only">
+                                    <div class="w-10 h-10 rounded-full bg-green-600 border-2 border-transparent peer-checked:border-white peer-checked:ring-2 peer-checked:ring-green-500 transition shadow-lg shadow-green-900/50"></div>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="annColor" value="blue" class="peer sr-only">
+                                    <div class="w-10 h-10 rounded-full bg-blue-600 border-2 border-transparent peer-checked:border-white peer-checked:ring-2 peer-checked:ring-blue-500 transition shadow-lg shadow-blue-900/50"></div>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-slate-900/50 rounded-xl border border-slate-800">
+                            <input type="checkbox" id="annActive" class="w-6 h-6 accent-orange-500 cursor-pointer">
+                            <label for="annActive" class="cursor-pointer select-none font-bold text-slate-300">เปิดใช้งานประกาศ (แสดงแถบวิ่งหน้าเว็บ)</label>
+                        </div>
+                        <button type="submit" class="w-full py-3 bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-xl transition shadow-lg shadow-orange-900/20">
+                            <i class="fa-solid fa-save mr-2"></i> บันทึกประกาศ
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="movieModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[100] animate-fade-in overflow-y-auto">
+        <div class="glass w-full max-w-4xl rounded-3xl p-6 md:p-8 my-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold flex items-center gap-2" id="modalTitle">
+                    <i class="fa-solid fa-circle-plus text-sky-500"></i> เพิ่มข้อมูลซีรีส์
+                </h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <div class="mb-8 p-4 bg-sky-500/10 border border-sky-500/20 rounded-2xl flex flex-col md:flex-row gap-3">
+                <div class="flex-1 relative">
+                    <i class="fa-brands fa-youtube absolute left-3 top-3 text-red-500"></i>
+                    <input type="text" id="aiUrl" placeholder="วางลิงก์ YouTube เพื่อให้ AI ดึงข้อมูล..." class="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none">
+                </div>
+                <button id="aiBtn" onclick="fetchAiData()" class="bg-sky-600 hover:bg-sky-500 px-6 py-2.5 rounded-xl text-sm font-bold transition flex items-center justify-center gap-2 min-w-[140px]">
+                    <i class="fa-solid fa-robot"></i> <span>ดึงข้อมูล AI</span>
+                </button>
+            </div>
+
+            <form id="movieForm" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <input type="hidden" id="movieId">
+                
+                <div class="space-y-4">
+                    <div class="aspect-[2/3] rounded-2xl bg-slate-900 border-2 border-dashed border-slate-700 overflow-hidden relative group">
+                        <img id="posterPreview" src="" class="w-full h-full object-cover hidden">
+                        <div id="posterPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
+                            <i class="fa-solid fa-image text-4xl mb-2"></i>
+                            <p class="text-xs text-center px-4">ใส่ลิงก์รูปเพื่อ Preview</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">Poster URL</label>
+                        <input type="text" id="posterUrl" oninput="updatePreview()" class="w-full px-3 py-2 rounded-lg text-sm" required>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">ชื่อเรื่อง</label>
+                        <input type="text" id="title" class="w-full px-3 py-2 rounded-lg" required>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">ปี</label>
+                            <input type="number" id="year" class="w-full px-3 py-2 rounded-lg">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">เรตติ้ง</label>
+                            <input type="number" step="0.1" id="rating" class="w-full px-3 py-2 rounded-lg">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">YouTube ID</label>
+                        <input type="text" id="ytId" class="w-full px-3 py-2 rounded-lg font-mono text-sky-400" required>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">นักแสดง</label>
+                        <input type="text" id="actors" class="w-full px-3 py-2 rounded-lg">
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">หมวดหมู่</label>
+                        <select id="category" class="w-full px-3 py-2 rounded-lg">
+                            <option value="china">ซีรีส์จีน (China)</option>
+                            <option value="inter">พากย์ไทย (Inter)</option>
+                            <option value="anime">อนิเมะ (Anime)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">จำนวนตอน</label>
+                        <input type="number" id="totalEpisodes" class="w-full px-3 py-2 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">สิทธิ์สมาชิก</label>
+                        <label class="flex items-center gap-3 p-3 bg-yellow-500/5 border border-yellow-500/20 rounded-xl cursor-pointer">
+                            <input type="checkbox" id="isVip" class="w-5 h-5 accent-yellow-500">
+                            <span class="text-yellow-500 font-bold">VIP Only</span>
+                        </label>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button type="submit" class="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition shadow-lg shadow-green-900/20">บันทึก</button>
+                    </div>
+                </div>
+
+                <div class="md:col-span-3">
+                    <label class="text-xs text-slate-500 mb-1 block uppercase font-bold">เรื่องย่อ / ข้อคิด</label>
+                    <textarea id="description" rows="3" class="w-full px-3 py-2 rounded-lg text-sm"></textarea>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="passwordModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[100]">
+        <div class="glass w-full max-w-md rounded-3xl p-8">
+            <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2"><i class="fa-solid fa-lock text-sky-500"></i> เปลี่ยนรหัสผ่าน</h3>
+            <form id="passwordForm" class="space-y-4">
+                <input type="password" id="oldPass" placeholder="รหัสผ่านเดิม" class="w-full px-4 py-3 rounded-xl text-sm" required>
+                <input type="password" id="newPass" placeholder="รหัสผ่านใหม่" class="w-full px-4 py-3 rounded-xl text-sm" required>
+                <div class="flex gap-2 mt-6">
+                    <button type="button" onclick="closePasswordModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition shadow-lg shadow-sky-900/20">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- User Role Modal -->
+    <div id="userRoleModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[100]">
+        <div class="glass w-full max-w-sm rounded-3xl p-8">
+            <h3 class="text-xl font-bold text-white mb-6">แก้ไขสิทธิ์ผู้ใช้งาน</h3>
+            <p id="editingUsername" class="text-slate-400 mb-4 text-sm"></p>
+            <form id="userRoleForm" class="space-y-4">
+                <input type="hidden" id="editUserId">
+                <select id="editUserRole" class="w-full px-4 py-3 rounded-xl text-sm outline-none">
+                    <option value="user">USER (สมาชิกทั่วไป)</option>
+                    <option value="vip">VIP (สมาชิกพรีเมียม)</option>
+                    <option value="admin">ADMIN (ผู้ดูแลระบบ)</option>
+                </select>
+                <div class="flex gap-2 mt-6">
+                    <button type="button" onclick="closeUserRoleModal()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition">ยกเลิก</button>
+                    <button type="submit" class="flex-1 py-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl transition shadow-lg shadow-sky-900/20">บันทึก</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Batch Import Modal -->
+    <div id="batchModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center p-4 z-[100]">
+        <div class="glass w-full max-w-3xl rounded-3xl p-8 max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center mb-6 shrink-0">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="fa-solid fa-layer-group text-purple-500"></i> นำเข้าหลายเรื่อง (Batch Import)</h3>
+                <button onclick="closeBatchModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
+            </div>
+            
+            <!-- Step 1: Input Links -->
+            <div id="batchInputStep" class="space-y-4 flex-1 overflow-y-auto">
+                <p class="text-sm text-slate-400">วางลิงก์ YouTube ทีละบรรทัด</p>
+                <textarea id="batchLinks" rows="10" class="w-full px-4 py-3 rounded-xl text-sm font-mono bg-slate-900 border border-slate-700 focus:border-purple-500 outline-none" placeholder="https://www.youtube.com/watch?v=...\nhttps://youtu.be/..."></textarea>
+                <button onclick="analyzeBatchLinks()" id="btnAnalyzeBatch" class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl transition shadow-lg shadow-purple-900/20">
+                    <i class="fa-solid fa-magnifying-glass mr-2"></i> วิเคราะห์ข้อมูล (Step 1)
+                </button>
+            </div>
+
+            <!-- Step 2: Review & Edit -->
+            <div id="batchReviewStep" class="hidden flex-col h-full overflow-hidden">
+                <div class="flex justify-between items-center mb-2 shrink-0">
+                    <p class="text-sm text-slate-400">ตรวจสอบและแก้ไขข้อมูลก่อนบันทึก (แก้รูปปกได้ที่ช่อง URL)</p>
+                    <button onclick="resetBatchModal()" class="text-xs text-slate-500 hover:text-white underline">กลับไปแก้ไขลิงก์</button>
+                </div>
+                <div id="batchReviewList" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar mb-4"></div>
+                
+                <div id="batchLog" class="hidden bg-slate-900 p-4 rounded-xl text-xs font-mono h-32 overflow-y-auto border border-slate-700 shrink-0 mb-4"></div>
+
+                <button onclick="confirmBatchImport()" id="btnSaveBatch" class="w-full py-3 bg-green-600 hover:bg-green-500 text-white font-bold rounded-xl transition shadow-lg shadow-green-900/20 shrink-0">
+                    <i class="fa-solid fa-save mr-2"></i> ยืนยันนำเข้าทั้งหมด (Step 2)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>

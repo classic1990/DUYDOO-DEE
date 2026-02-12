@@ -2,34 +2,123 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <title>VIP Login - DUYDODEE 4K</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เข้าสู่ระบบ - DUYDODEE 4K Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Kanit', sans-serif; background: #0f172a; }
-        .vip-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 1px solid #eab30855; }
+        body { font-family: 'Kanit', sans-serif; background-color: #020617; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
+        input { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
+        input:focus { border-color: #0ea5e9 !important; ring: 2px #0ea5e9; }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
-    <div class="vip-card w-full max-w-md p-10 rounded-[2.5rem] text-center shadow-2xl">
-        <div class="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-            <i class="fa-solid fa-crown text-4xl text-yellow-500"></i>
-        </div>
-        <h1 class="text-3xl font-bold text-white mb-6">VIP LOGIN</h1>
-        <form id="loginForm" class="space-y-4 text-left">
-            <input type="text" id="user" placeholder="ชื่อผู้ใช้งาน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition" required>
-            <input type="password" id="pass" placeholder="รหัสผ่าน" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none focus:border-yellow-500 transition" required>
-            <button class="w-full bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold py-4 rounded-xl transition">เข้าสู่ระบบพรีเมียม</button>
-        </form>
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Background Effects -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+        <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-sky-500/20 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[120px]"></div>
     </div>
+
+    <div class="glass w-full max-w-md p-8 rounded-3xl shadow-2xl border-t border-white/10">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-sky-500 mb-2 flex justify-center items-center gap-2">
+                <i class="fa-solid fa-screwdriver-wrench"></i> ADMIN<span class="text-white">4K</span>
+            </h1>
+            <p class="text-slate-400 text-sm">เข้าสู่ระบบจัดการหลังบ้าน</p>
+        </div>
+
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Username</label>
+                <div class="relative">
+                    <i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-500"></i>
+                    <input type="text" id="username" class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500" placeholder="ชื่อผู้ใช้งาน" required>
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Password</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500"></i>
+                    <input type="password" id="password" class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500" placeholder="รหัสผ่าน" required>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" id="rememberMe" class="w-4 h-4 accent-sky-500 rounded bg-slate-900 border-slate-700">
+                    <span class="text-slate-400 text-xs">จำฉันไว้ในระบบ (Remember Me)</span>
+                </label>
+            </div>
+
+            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-sky-900/20 flex items-center justify-center gap-2 group">
+                <span>เข้าสู่ระบบ</span>
+                <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
+            </button>
+        </form>
+        
+        <div class="mt-6 text-center">
+            <a href="index.html" class="text-slate-500 hover:text-sky-400 text-sm transition"><i class="fa-solid fa-house mr-1"></i> กลับไปหน้าเว็บไซต์หลัก</a>
+        </div>
+    </div>
+
     <script>
-        document.getElementById('loginForm').onsubmit = async (e) => {
+const API_URL = '/api';
+
+        // ถ้ามี Token อยู่แล้ว ให้ไปหน้า Admin เลย
+        if(localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) {
+            window.location.href = 'admin.html';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            // จำลองการล็อกอิน (ในโปรเจกต์จริงให้ยิงไปที่ /api/login)
-            localStorage.setItem('userStatus', 'VIP');
-            alert('ยินดีต้อนรับสมาชิก VIP!');
-            window.location.href = 'index.html';
-        };
+            const btn = e.target.querySelector('button');
+            const originalText = btn.innerHTML;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const rememberMe = document.getElementById('rememberMe').checked;
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังตรวจสอบ...';
+
+            try {
+                const res = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await res.json();
+
+                if (data.success) {
+                    const storage = rememberMe ? localStorage : sessionStorage;
+                    
+                    storage.setItem('accessToken', data.accessToken);
+                    storage.setItem('userRole', data.role);
+                    storage.setItem('username', data.username || username);
+                    storage.setItem('userStatus', data.role === 'vip' ? 'VIP' : 'MEMBER');
+                    
+                    // ถ้าเป็น Admin ให้ไปหน้า Admin, ถ้าไม่ใช่ให้ไปหน้าแรก
+                    if (data.role === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else {
+                        window.location.href = 'index.html';
+                    }
+                } else {
+                    alert(data.message || 'เข้าสู่ระบบไม่สำเร็จ');
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            } catch (err) {
+                console.error(err);
+                alert('เชื่อมต่อ Server ไม่ได้');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,470 +1,547 @@
 // CONFIG
-const API_URL = 'http://localhost:5000/api/movies'; 
-const LOGIN_API_URL = 'http://localhost:5000/api/login';
-let moviesData = [];
-let isEditMode = false;
+const API_URL = '/api';
+let allMovies = [];
+let allUsers = [];
+let batchTempData = []; // เก็บข้อมูลชั่วคราวสำหรับ Batch Import
 
-// --- CORE FUNCTIONS ---
+// Global Token Variables
+const getToken = () => localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+const getRole = () => localStorage.getItem('userRole') || sessionStorage.getItem('userRole');
 
 document.addEventListener('DOMContentLoaded', () => {
-    checkAuthState(); // ตรวจสอบสถานะ Login เมื่อโหลดหน้า
-    fetchMovies();
-
-    // Handle Forms
-    document.getElementById('movieForm').addEventListener('submit', handleFormSubmit);
-    document.getElementById('loginForm').addEventListener('submit', handleLogin);
-
-    // Handle Logout
-    document.getElementById('logoutButton').addEventListener('click', logout);
+    // ตรวจสอบว่าเป็นหน้า Admin หรือไม่ (เช็คจาก Element ที่มีเฉพาะในหน้า Admin)
+    if (document.getElementById('adminTableBody')) {
+        initAdminPage();
+    }
 });
 
-async function fetchMovies() {
-    try {
-        // ยิงไปที่ Database ของจริง
-        const res = await fetch(API_URL);
-        if(!res.ok) throw new Error("API Error");
-        const data = await res.json();
-        
-        // ใช้ข้อมูลจาก Database
-        moviesData = data.data || [];
-    } catch (err) {
-        console.warn("ไม่สามารถเชื่อมต่อ Server ได้ (ตรวจสอบว่ารัน node server.js หรือยัง)", err);
-        // ถ้าต่อไม่ได้ ให้ใช้ array ว่างๆ หรือโชว์ error
-        moviesData = []; 
-        document.getElementById('movieGrid').innerHTML = `
-            <div class="col-span-full text-center py-20 text-red-500">
-                <i class="fa-solid fa-triangle-exclamation text-3xl mb-3"></i>
-                <p>เชื่อมต่อ Server ไม่ได้ กรุณารัน Backend ก่อน</p>
-            </div>`;
+// --- SECURE FETCH (Auto Refresh Token) ---
+async function secureFetch(url, options = {}) {
+    let token = getToken();
+    let headers = { ...options.headers, 'Content-Type': 'application/json' };
+    
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     }
-    renderAllViews();
-}
 
-function renderAllViews() {
-    renderMovieGrid(moviesData);
-    renderAdminTable(moviesData);
-    renderAdminStats(moviesData);
-}
+    let res = await fetch(url, { ...options, headers });
 
-// --- AI & SMART IMPORT ---
+    if (res.status === 401) {
+        // Token หมดอายุ -> พยายาม Refresh
+        try {
+            const refreshRes = await fetch(`${API_URL}/refresh-token`, { method: 'POST' });
+            if (refreshRes.ok) {
+                const data = await refreshRes.json();
+                if (data.accessToken) {
+                    // บันทึก Token ใหม่ลงที่เดิม (Local หรือ Session)
+                    if (localStorage.getItem('accessToken')) localStorage.setItem('accessToken', data.accessToken);
+                    else sessionStorage.setItem('accessToken', data.accessToken);
+                    
+                    // Retry Request
+                    headers['Authorization'] = `Bearer ${data.accessToken}`;
+                    res = await fetch(url, { ...options, headers });
+                    if (res.status !== 401) return res;
+                }
+            }
+        } catch (err) { console.error('Refresh failed', err); }
 
-async function aiAutoFill() {
-    const url = document.getElementById('inpAiLink').value.trim();
-    if (!url) { alert('กรุณาวางลิงก์ YouTube ก่อนครับ'); return; }
-
-    const videoId = extractYouTubeID(url);
-    if (!videoId) { alert('รูปแบบลิงก์ไม่ถูกต้อง กรุณาลองใหม่'); return; }
-
-    const btn = document.querySelector('button[onclick="aiAutoFill()"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังดึง...';
-    btn.disabled = true;
-
-    try {
-        document.getElementById('inpYt').value = videoId;
-        const posterUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-        document.getElementById('inpPoster').value = posterUrl;
-        updatePreview();
-
-        const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
-        const data = await res.json();
-        
-        if (data.title) {
-            document.getElementById('inpTitle').value = data.title;
-        } else {
-            document.getElementById('inpTitle').value = "New Video " + videoId;
-        }
-        document.getElementById('inpRating').value = (Math.random() * (9.9 - 7.0) + 7.0).toFixed(1);
-
-    } catch (e) {
-        console.error(e);
-        alert('ดึงข้อมูลบางส่วนไม่สำเร็จ แต่ได้ ID มาแล้ว');
-    } finally {
-        btn.innerHTML = '<i class="fa-solid fa-check"></i> เรียบร้อย';
-        setTimeout(() => {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }, 2000);
+        // ถ้า Refresh ไม่ผ่าน
+        alert('เซสชั่นหมดอายุ กรุณาเข้าสู่ระบบใหม่');
+        logout();
+        throw new Error('Unauthorized');
     }
+    return res;
 }
 
-function extractYouTubeID(url) {
-    const regExp = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    const match = url.match(regExp);
-    return (match && match[1]) ? match[1] : null;
-}
-
-function updatePreview() {
-    const url = document.getElementById('inpPoster').value;
-    if(url) document.getElementById('posterPreview').src = url;
-}
-
-// --- RENDERERS ---
-
-function renderMovieGrid(movies) {
-    const grid = document.getElementById('movieGrid');
-    if(movies.length === 0) {
-         // ถ้าไม่มีข้อมูล ให้แสดงข้อความ
-        if (!grid.innerHTML.includes('เชื่อมต่อ Server ไม่ได้')) {
-             grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500">ไม่พบข้อมูล</div>`;
-        }
+// --- ADMIN PAGE INITIALIZATION ---
+function initAdminPage() {
+    // 1. Security Check
+    if (!getToken() || getRole() !== 'admin') {
+        alert('เฉพาะแอดมินเท่านั้นที่เข้าถึงหน้านี้ได้');
+        window.location.href = 'login.html';
         return;
     }
-    grid.innerHTML = movies.map(m => `
-        <div class="group cursor-pointer relative" onclick="openPlayer('${m.id}')">
-            <div class="aspect-[2/3] rounded-xl overflow-hidden mb-3 relative shadow-lg bg-slate-800 border border-slate-700/50">
-                <img src="${m.posterUrl || 'https://via.placeholder.com/300x450?text=No+Image'}" 
-                     alt="${m.title}"
-                     class="w-full h-full object-cover group-hover:scale-110 transition duration-500 brightness-90 group-hover:brightness-110">
-                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
-                    <div class="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center shadow-xl scale-0 group-hover:scale-100 transition duration-300">
-                        <i class="fa-solid fa-play text-white"></i>
-                    </div>
-                </div>
-                <span class="absolute top-2 right-2 bg-sky-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow">HD</span>
-            </div>
-            <h3 class="text-sm font-semibold text-slate-200 group-hover:text-sky-400 transition line-clamp-1">${m.title}</h3>
-            <div class="flex justify-between text-[11px] text-slate-500 mt-1 font-medium">
-                <span>${m.year}</span>
-                <span class="text-yellow-500"><i class="fa-solid fa-star"></i> ${m.rating}</span>
-            </div>
-        </div>
-    `).join('');
+
+    // 3. Display Admin Name
+    const adminNameDisplay = document.getElementById('adminNameDisplay');
+    if (adminNameDisplay) adminNameDisplay.innerText = (localStorage.getItem('username') || sessionStorage.getItem('username')) || 'Admin';
+
+    // 4. Load Initial Data
+    loadMovies();
+
+    // 5. Attach Event Listeners
+    const movieForm = document.getElementById('movieForm');
+    if (movieForm) {
+        movieForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('movieId').value;
+            const data = {
+                title: document.getElementById('title').value,
+                year: document.getElementById('year').value,
+                rating: document.getElementById('rating').value,
+                ytId: document.getElementById('ytId').value,
+                posterUrl: document.getElementById('posterUrl').value,
+                category: document.getElementById('category').value,
+                totalEpisodes: document.getElementById('totalEpisodes').value,
+                description: document.getElementById('description').value,
+                isVip: document.getElementById('isVip').checked
+            };
+
+            try {
+                await secureFetch(id ? `${API_URL}/movies/${id}` : `${API_URL}/movies`, {
+                    method: id ? 'PUT' : 'POST',
+                    body: JSON.stringify(data)
+                });
+                closeModal();
+                loadMovies();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการบันทึก');
+            }
+        };
+    }
+
+    const announcementForm = document.getElementById('announcementForm');
+    if (announcementForm) {
+        announcementForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const text = document.getElementById('annText').value;
+            const isActive = document.getElementById('annActive').checked;
+            const color = document.querySelector('input[name="annColor"]:checked').value;
+            try {
+                const res = await secureFetch(`${API_URL}/announcement`, {
+                    method: 'POST',
+                    body: JSON.stringify({ text, isActive, color })
+                });
+                const json = await res.json();
+                if (json.success) alert('บันทึกประกาศเรียบร้อย');
+                else alert(json.message);
+            } catch (err) { alert('เกิดข้อผิดพลาด'); }
+        };
+    }
+
+    const userRoleForm = document.getElementById('userRoleForm');
+    if (userRoleForm) {
+        userRoleForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('editUserId').value;
+            const role = document.getElementById('editUserRole').value;
+            try {
+                const res = await secureFetch(`${API_URL}/users/${id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ role })
+                });
+                const json = await res.json();
+                if (json.success) { closeUserRoleModal(); loadUsers(); } else { alert(json.message); }
+            } catch (err) { alert('เกิดข้อผิดพลาด'); }
+        };
+    }
+
+    const passwordForm = document.getElementById('passwordForm');
+    if (passwordForm) {
+        passwordForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const oldPassword = document.getElementById('oldPass').value;
+            const newPassword = document.getElementById('newPass').value;
+            try {
+                const res = await secureFetch(`${API_URL}/change-password`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ oldPassword, newPassword })
+                });
+                const json = await res.json();
+                if (json.success) { alert('เปลี่ยนรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่'); logout(); }
+                else { alert(json.message); }
+            } catch (err) { alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
+        };
+    }
 }
 
-function renderAdminTable(movies) {
-    const tbody = document.getElementById('adminTableBody');
-    tbody.innerHTML = movies.map(m => `
-        <tr class="hover:bg-slate-800/50 transition border-b border-slate-800/50 last:border-0">
-            <td class="px-6 py-3">
-                <img src="${m.posterUrl}" alt="Poster of ${m.title}" class="w-10 h-14 object-cover rounded bg-slate-700 border border-slate-600">
+// --- HELPER FUNCTIONS ---
+async function logout() {
+    if (confirm('ยืนยันการออกจากระบบ?')) {
+        try {
+            await fetch(`${API_URL}/logout`, { method: 'POST' });
+        } catch (e) {
+            console.error('Logout API failed', e);
+        }
+        localStorage.clear();
+        sessionStorage.clear();
+        window.location.href = 'login.html';
+    }
+}
+
+// --- MOVIE MANAGEMENT ---
+async function loadMovies() {
+    try {
+        const res = await secureFetch(`${API_URL}/movies`);
+        if (res.status === 403) {
+            alert('คุณไม่มีสิทธิ์เข้าถึง (ไม่ใช่เจ้าของระบบ)');
+            localStorage.clear();
+            window.location.href = 'login.html';
+            return;
+        }
+        const json = await res.json();
+        allMovies = json.data;
+        renderTable(allMovies);
+        updateStats();
+    } catch (err) { alert('เชื่อมต่อ Server ไม่ได้'); }
+}
+
+function renderTable(movies) {
+    document.getElementById('adminTableBody').innerHTML = movies.map(m => `
+        <tr class="hover:bg-slate-900 transition">
+            <td class="p-2">
+                <img src="${m.posterUrl}" alt="${m.title}" class="w-12 h-auto object-cover rounded-md" onerror="this.onerror=null; this.src='https://placehold.co/300x450?text=No+Image'">
             </td>
-            <td class="px-6 py-3 font-medium text-white">${m.title}</td>
-            <td class="px-6 py-3">
-                <div class="flex flex-col text-xs text-slate-400 gap-1">
-                    <span class="bg-slate-800 px-2 py-0.5 rounded w-fit">${m.year}</span>
-                    <span class="text-yellow-500"><i class="fa-solid fa-star"></i> ${m.rating}</span>
-                </div>
-            </td>
-            <td class="px-6 py-3 font-mono text-xs text-sky-400 bg-slate-900/30 rounded">${m.ytId}</td>
-            <td class="px-6 py-3 text-right space-x-2">
-                <button onclick="editMovie('${m.id}')" class="text-blue-400 hover:text-white hover:bg-blue-600 bg-blue-500/10 p-2 rounded-lg transition"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="deleteMovie('${m.id}')" class="text-red-400 hover:text-white hover:bg-red-600 bg-red-500/10 p-2 rounded-lg transition"><i class="fa-solid fa-trash"></i></button>
+            <td class="p-4 font-bold text-sm">${m.title} <br> <span class="text-xs text-slate-500 font-normal">${m.year}</span></td>
+            <td class="p-4 text-xs font-medium uppercase text-slate-400">${m.category}</td>
+            <td class="p-4">${m.isVip ? '<span class="text-yellow-500 text-xs font-bold bg-yellow-500/10 px-2 py-1 rounded border border-yellow-500/20"><i class="fa-solid fa-crown"></i> VIP</span>' : '<span class="text-slate-500 text-xs">FREE</span>'}</td>
+            <td class="p-4 text-right">
+                <button onclick="editMovie('${m._id}')" class="text-sky-400 hover:text-white p-2 transition"><i class="fa-solid fa-pen-to-square"></i></button>
+                <button onclick="deleteMovie('${m._id}')" class="text-red-400 hover:text-white p-2 transition"><i class="fa-solid fa-trash-can"></i></button>
             </td>
         </tr>
     `).join('');
 }
 
-function renderAdminStats(movies) {
-    // 1. Total Movies
-    document.getElementById('adminTotalMovies').innerText = movies.length;
-
-    // 2. Total Episodes (Sum)
-    const totalEp = movies.reduce((sum, m) => sum + (parseInt(m.episodes) || 0), 0);
-    document.getElementById('adminTotalEpisodes').innerText = totalEp.toLocaleString();
-
-    // 3. Average Rating
-    const avgRating = movies.length ? (movies.reduce((sum, m) => sum + (parseFloat(m.rating) || 0), 0) / movies.length).toFixed(1) : "0.0";
-    document.getElementById('adminAvgRating').innerText = avgRating;
+function updateStats() {
+    document.getElementById('statTotal').innerText = allMovies.length;
+    document.getElementById('statVip').innerText = allMovies.filter(m => m.isVip).length;
 }
 
-// --- NAVIGATION & PLAYER ---
-
-function switchView(viewName) {
-    // ป้องกันการเข้าหน้า Admin หากยังไม่ Login
-    if (viewName === 'admin' && !localStorage.getItem('accessToken')) {
-        openLoginModal();
-        return; // หยุดการทำงาน
-    }
-
-    document.getElementById('homeView').classList.add('hidden');
-    document.getElementById('playerView').classList.add('hidden');
-    document.getElementById('adminView').classList.add('hidden');
-    document.getElementById('mainPlayer').src = ""; 
-
-    document.getElementById(viewName + 'View').classList.remove('hidden');
-    // ซ่อนปุ่ม Admin ถ้าไม่ได้ Login
-    checkAuthState();
-    window.scrollTo(0, 0);
+function searchAdmin() {
+    const searchTerm = document.getElementById('adminSearch').value.toLowerCase().trim();
+    const filteredMovies = allMovies.filter(movie => movie.title.toLowerCase().includes(searchTerm));
+    renderTable(filteredMovies);
 }
 
-function openPlayer(id) {
-    const movie = moviesData.find(m => String(m.id) === String(id));
-    if(!movie) return;
+async function fetchAiData() {
+    const btn = document.getElementById('aiBtn');
+    const url = document.getElementById('aiUrl').value;
+    const vid = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1] || url;
 
-    document.getElementById('playerTitle').innerText = movie.title;
-    document.getElementById('playerDesc').innerText = "เรื่องราวสุดเข้มข้นของ " + movie.title + " ที่แฟนๆ รอคอย...";
-    document.getElementById('playerYear').innerText = movie.year;
-    document.getElementById('playerRating').innerText = movie.rating;
-    document.getElementById('playerPoster').src = movie.posterUrl;
-    document.getElementById('playerPoster').alt = `Poster of ${movie.title}`;
-    document.getElementById('totalEpDisplay').innerText = `${movie.episodes} ตอน`;
-    document.getElementById('playerBackdrop').style.backgroundImage = `url('${movie.posterUrl}')`;
+    if (!vid) return alert('ใส่ลิงก์ YouTube ก่อนครับ');
 
-    renderEpisodeList(movie);
-    switchView('player');
-}
-
-function renderEpisodeList(movie) {
-    const epList = document.getElementById('episodeList');
-    const epContainer = epList.parentElement; // Assumes the list is in a container we can hide/show
-    const player = document.getElementById('mainPlayer');
-
-    // Always set the player source. The backend model only has one youtube ID per movie.
-    player.src = `https://www.youtube.com/embed/${movie.ytId}?autoplay=1&rel=0`;
-
-    // Only show episode buttons if there is more than one episode.
-    if (movie.episodes > 1) {
-        epContainer.classList.remove('hidden');
-        let html = '';
-        for (let i = 1; i <= movie.episodes; i++) {
-            // The onclick now calls a function that only handles UI state
-            html += `<button id="ep-btn-${i}" onclick="setActiveEpisode(${i}, ${movie.episodes})" 
-                        class="border rounded-lg py-2.5 text-xs font-bold transition duration-200">
-                        ${i}
-                     </button>`;
-        }
-        epList.innerHTML = html;
-        setActiveEpisode(1, movie.episodes); // Highlight the first episode
-    } else {
-        epContainer.classList.add('hidden');
-        epList.innerHTML = ''; // Clear out any old buttons
-    }
-}
-
-function setActiveEpisode(currentEp, totalEps) {
-    // This function only updates the appearance of the buttons to show which is "active".
-    // It does not change the video, as there is only one video ID available.
-    for (let i = 1; i <= totalEps; i++) {
-        const btn = document.getElementById(`ep-btn-${i}`);
-        if (!btn) continue;
-
-        const isActive = i === currentEp;
-        // Toggle classes for active/inactive state
-        btn.classList.toggle('bg-sky-600', isActive);
-        btn.classList.toggle('text-white', isActive);
-        btn.classList.toggle('shadow-lg', isActive);
-        btn.classList.toggle('shadow-sky-600/50', isActive);
-        btn.classList.toggle('scale-105', isActive);
-        btn.classList.toggle('border-sky-500', isActive);
-        btn.classList.toggle('bg-slate-800', !isActive);
-        btn.classList.toggle('text-slate-400', !isActive);
-        btn.classList.toggle('hover:bg-slate-700', !isActive);
-        btn.classList.toggle('hover:text-white', !isActive);
-        btn.classList.toggle('border-slate-700', !isActive);
-    }
-}
-
-// --- AUTHENTICATION ---
-
-function openLoginModal() {
-    document.getElementById('loginModal').classList.remove('hidden');
-}
-
-function closeLoginModal() {
-    document.getElementById('loginModal').classList.add('hidden');
-    document.getElementById('loginError').classList.add('hidden');
-}
-
-async function handleLogin(e) {
-    e.preventDefault();
-    const username = document.getElementById('inpUsername').value;
-    const password = document.getElementById('inpPassword').value;
-    const btn = e.target.querySelector('button[type="submit"]');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
     btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> AI กำลังทำงาน...';
 
     try {
-        const res = await fetch(LOGIN_API_URL, {
+        const res = await secureFetch(`${API_URL}/fetch-movie-data`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password })
+            body: JSON.stringify({ videoId: vid })
         });
-        const data = await res.json();
+        const json = await res.json();
 
-        if (!res.ok || !data.success) {
-            throw new Error(data.message || 'Login failed');
+        if (json.success) {
+            const d = json.data;
+            document.getElementById('title').value = d.title;
+            document.getElementById('year').value = d.year;
+            document.getElementById('rating').value = d.rating;
+            document.getElementById('ytId').value = d.ytId;
+            document.getElementById('posterUrl').value = d.posterUrl;
+            document.getElementById('description').value = d.description + "\n\nนักแสดง: " + d.actors + "\nข้อคิด: " + d.lessons;
+            if (d.category) document.getElementById('category').value = d.category;
+            updatePreview();
+        } else {
+            alert(json.message || 'AI ไม่สามารถดึงข้อมูลได้');
         }
+    } catch (err) { console.error(err); alert('เกิดข้อผิดพลาดในการเชื่อมต่อ'); }
 
-        // *** เก็บ Token และข้อมูลผู้ใช้ลง LocalStorage ***
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('user', JSON.stringify(data.user));
-
-        closeLoginModal();
-        checkAuthState(); // อัปเดต UI
-        switchView('admin'); // ไปยังหน้า Admin หลัง Login สำเร็จ
-
-    } catch (err) {
-        const loginError = document.getElementById('loginError');
-        loginError.innerText = '⚠️ ' + err.message;
-        loginError.classList.remove('hidden');
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-robot"></i> ดึงข้อมูล AI';
 }
 
-function logout() {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('user');
-    checkAuthState();
-    switchView('home');
-    alert('ออกจากระบบสำเร็จ');
-}
-
-function checkAuthState() {
-    const token = localStorage.getItem('accessToken');
-    const user = JSON.parse(localStorage.getItem('user'));
-    const loginButton = document.getElementById('loginButton');
-    const loggedInUserDiv = document.getElementById('loggedInUser');
-    const usernameDisplay = document.getElementById('usernameDisplay');
-    const adminNavButton = document.querySelector('button[onclick="switchView(\'admin\')"]');
-
-    loginButton.classList.toggle('hidden', !!token);
-    loggedInUserDiv.classList.toggle('hidden', !token);
-    adminNavButton.classList.toggle('hidden', !token);
-    if (token && user) usernameDisplay.innerText = `สวัสดี, ${user.name}`;
-}
-
-// --- ADMIN ACTIONS (CRUD) ---
-
-function openModal() {
-    document.getElementById('movieModal').classList.remove('hidden');
-    document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-plus text-sky-400"></i> เพิ่มหนังใหม่';
-    document.getElementById('movieForm').reset();
-    document.getElementById('editId').value = "";
-    document.getElementById('posterPreview').src = "https://via.placeholder.com/300x450?text=No+Image";
-    isEditMode = false;
-}
-
-function closeModal() {
-    document.getElementById('movieModal').classList.add('hidden');
+// --- UI HELPERS ---
+function openModal() { document.getElementById('movieModal').classList.remove('hidden'); document.getElementById('movieForm').reset(); document.getElementById('movieId').value = ''; updatePreview(); }
+function closeModal() { document.getElementById('movieModal').classList.add('hidden'); }
+function updatePreview() {
+    const url = document.getElementById('posterUrl').value;
+    const img = document.getElementById('posterPreview');
+    const placeholder = document.getElementById('posterPlaceholder');
+    if (url) { img.src = url; img.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+    else { img.classList.add('hidden'); placeholder.classList.remove('hidden'); }
 }
 
 function editMovie(id) {
-    const movie = moviesData.find(m => String(m.id) === String(id));
-    if(!movie) return;
-
-    openModal();
-    document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-sky-400"></i> แก้ไขข้อมูลหนัง';
-    document.getElementById('inpTitle').value = movie.title;
-    document.getElementById('inpYear').value = movie.year;
-    document.getElementById('inpRating').value = movie.rating;
-    document.getElementById('inpEp').value = movie.episodes;
-    document.getElementById('inpPoster').value = movie.posterUrl;
-    document.getElementById('inpYt').value = movie.ytId;
-    document.getElementById('editId').value = movie.id;
+    const m = allMovies.find(i => i._id === id);
+    document.getElementById('movieId').value = m._id;
+    document.getElementById('title').value = m.title;
+    document.getElementById('year').value = m.year;
+    document.getElementById('rating').value = m.rating;
+    document.getElementById('ytId').value = m.ytId;
+    document.getElementById('posterUrl').value = m.posterUrl;
+    document.getElementById('category').value = m.category;
+    document.getElementById('totalEpisodes').value = m.totalEpisodes;
+    document.getElementById('description').value = m.description;
+    document.getElementById('isVip').checked = m.isVip;
     updatePreview();
-    isEditMode = true;
-}
-
-// *** ฟังก์ชันสำหรับสร้าง Header พร้อม Token ***
-function getAuthHeaders() {
-    const token = localStorage.getItem('accessToken');
-    const headers = { 'Content-Type': 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-    return headers;
-}
-
-// Handle Add/Edit Logic
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    const formData = {
-        title: document.getElementById('inpTitle').value,
-        year: document.getElementById('inpYear').value,
-        rating: document.getElementById('inpRating').value,
-        episodes: document.getElementById('inpEp').value,
-        posterUrl: document.getElementById('inpPoster').value,
-        ytId: document.getElementById('inpYt').value
-    };
-
-    const editId = document.getElementById('editId').value;
-    const btnSubmit = e.target.querySelector('button[type="submit"]');
-    btnSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
-
-    try {
-        let res;
-        if(isEditMode) {
-            // แก้ไข (PUT)
-            res = await fetch(`${API_URL}/${editId}`, {
-                method: 'PUT',
-                headers: getAuthHeaders(), // <-- ใช้ Header ที่มี Token
-                body: JSON.stringify(formData)
-            });
-        } else {
-            // เพิ่มใหม่ (POST)
-            res = await fetch(API_URL, {
-                method: 'POST',
-                headers: getAuthHeaders(), // <-- ใช้ Header ที่มี Token
-                body: JSON.stringify(formData)
-            });
-        }
-        
-        if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-                alert('Session หมดอายุ กรุณา Login ใหม่');
-                logout();
-            }
-            throw new Error("Operation Failed: " + res.statusText);
-        }
-        
-        const savedMovie = await res.json();
-
-        if (isEditMode) {
-            // Find index of the movie and update it
-            const index = moviesData.findIndex(m => m.id === editId);
-            if (index !== -1) {
-                moviesData[index] = savedMovie.data;
-            } else {
-                // Fallback if something went wrong, re-fetch all
-                return fetchMovies(); 
-            }
-        } else {
-            // Add new movie to the top of the list
-            moviesData.unshift(savedMovie.data);
-        }
-
-        closeModal();
-        renderAllViews(); // Re-render UI with updated local data
-
-    } catch (err) {
-        console.error(err);
-        alert("เกิดข้อผิดพลาด: " + err.message);
-    } finally {
-        btnSubmit.innerHTML = '<i class="fa-solid fa-save mr-2"></i> บันทึกข้อมูล';
-    }
+    document.getElementById('movieModal').classList.remove('hidden');
 }
 
 async function deleteMovie(id) {
-    if(!confirm("คุณต้องการลบหนังเรื่องนี้ใช่ไหม? (ลบแล้วกู้คืนไม่ได้)")) return;
-    
-    try {
-        const res = await fetch(`${API_URL}/${id}`, { 
-            method: 'DELETE',
-            headers: getAuthHeaders() // <-- ใช้ Header ที่มี Token
-        });
-        if (!res.ok) {
-            if (res.status === 401 || res.status === 403) {
-                alert('Session หมดอายุ กรุณา Login ใหม่');
-                logout();
-            }
-            throw new Error("Delete Failed");
-        }
-        // Remove deleted movie from local array and re-render
-        const index = moviesData.findIndex(m => m.id === id);
-        if (index > -1) moviesData.splice(index, 1);
-        renderAllViews();
-    } catch (err) {
-        alert("ลบไม่สำเร็จ: " + err.message);
+    if (confirm('ต้องการลบซีรีส์เรื่องนี้จริงหรือไม่?')) {
+        await secureFetch(`${API_URL}/movies/${id}`, { method: 'DELETE' });
+        loadMovies();
     }
 }
 
-function searchMovies() {
-    const query = document.getElementById("searchInput").value.toLowerCase();
-    const filtered = moviesData.filter((m) =>
-        m.title.toLowerCase().includes(query)
-    );
-    renderMovieGrid(filtered);
+// --- SECTION NAVIGATION ---
+function showSection(section) {
+    document.getElementById('moviesSection').classList.toggle('hidden', section !== 'movies');
+    document.getElementById('usersSection').classList.toggle('hidden', section !== 'users');
+    document.getElementById('announcementSection').classList.toggle('hidden', section !== 'announcement');
+
+    const navMovies = document.getElementById('nav-movies');
+    const navUsers = document.getElementById('nav-users');
+    const navAnn = document.getElementById('nav-announcement');
+
+    const activeClass = "bg-sky-600 text-white font-bold shadow-lg shadow-sky-900/20".split(" ");
+    const inactiveClass = "text-slate-400 hover:bg-slate-900".split(" ");
+
+    [navMovies, navUsers, navAnn].forEach(nav => {
+        nav.classList.remove(...activeClass);
+        nav.classList.add(...inactiveClass);
+    });
+
+    if (section === 'movies') {
+        navMovies.classList.add(...activeClass); navMovies.classList.remove(...inactiveClass);
+    } else if (section === 'users') {
+        navUsers.classList.add(...activeClass); navUsers.classList.remove(...inactiveClass);
+        loadUsers();
+    } else if (section === 'announcement') {
+        navAnn.classList.add(...activeClass); navAnn.classList.remove(...inactiveClass);
+        loadAnnouncement();
+    }
+}
+
+// --- USER MANAGEMENT ---
+async function loadUsers() {
+    try {
+        const res = await secureFetch(`${API_URL}/users`);
+        const json = await res.json();
+        if (json.success) {
+            allUsers = json.data;
+            renderUsers(allUsers);
+        }
+    } catch (err) { alert('โหลดข้อมูลผู้ใช้ไม่สำเร็จ'); }
+}
+
+function renderUsers(users) {
+    document.getElementById('usersTableBody').innerHTML = users.map(u => `
+        <tr class="hover:bg-slate-900 transition">
+            <td class="p-4 font-bold text-white">${u.username}</td>
+            <td class="p-4"><span class="bg-slate-800 px-2 py-1 rounded text-xs uppercase text-slate-300">${u.role}</span></td>
+            <td class="p-4 text-slate-400 text-sm">${new Date(u.createdAt).toLocaleDateString('th-TH')}</td>
+            <td class="p-4 text-right">
+                <button onclick="editUserRole('${u._id}', '${u.role}', '${u.username}')" class="text-sky-400 hover:text-white p-2 transition"><i class="fa-solid fa-user-pen"></i></button>
+                ${u.role !== 'admin' ? `<button onclick="deleteUser('${u._id}')" class="text-red-400 hover:text-white p-2 transition"><i class="fa-solid fa-trash-can"></i></button>` : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function searchUsers() {
+    const term = document.getElementById('userSearch').value.toLowerCase();
+    const filtered = allUsers.filter(u => u.username.toLowerCase().includes(term));
+    renderUsers(filtered);
+}
+
+function editUserRole(id, currentRole, username) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUserRole').value = currentRole;
+    document.getElementById('editingUsername').innerText = 'กำลังแก้ไข: ' + username;
+    document.getElementById('userRoleModal').classList.remove('hidden');
+}
+
+function closeUserRoleModal() { document.getElementById('userRoleModal').classList.add('hidden'); }
+
+async function deleteUser(id) {
+    if (!confirm('ต้องการลบผู้ใช้งานนี้จริงหรือไม่?')) return;
+    try {
+        const res = await secureFetch(`${API_URL}/users/${id}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.success) { loadUsers(); } else { alert(json.message); }
+    } catch (err) { alert('เกิดข้อผิดพลาด'); }
+}
+
+// --- ANNOUNCEMENT MANAGEMENT ---
+async function loadAnnouncement() {
+    try {
+        const res = await fetch(`${API_URL}/announcement`);
+        const json = await res.json();
+        if (json.success) {
+            document.getElementById('annText').value = json.data.text;
+            document.getElementById('annActive').checked = json.data.isActive;
+            const color = json.data.color || 'orange';
+            const radio = document.querySelector(`input[name="annColor"][value="${color}"]`);
+            if (radio) radio.checked = true;
+        }
+    } catch (err) { alert('โหลดข้อมูลประกาศไม่สำเร็จ'); }
+}
+
+// --- PASSWORD MANAGEMENT ---
+function openPasswordModal() { document.getElementById('passwordModal').classList.remove('hidden'); document.getElementById('passwordForm').reset(); }
+function closePasswordModal() { document.getElementById('passwordModal').classList.add('hidden'); }
+
+// --- BATCH IMPORT SYSTEM ---
+function openBatchModal() { 
+    document.getElementById('batchModal').classList.remove('hidden'); 
+    resetBatchModal();
+}
+function closeBatchModal() { document.getElementById('batchModal').classList.add('hidden'); }
+
+function resetBatchModal() {
+    document.getElementById('batchInputStep').classList.remove('hidden');
+    document.getElementById('batchReviewStep').classList.add('hidden');
+    document.getElementById('batchLinks').value = '';
+    document.getElementById('batchLog').classList.add('hidden');
+    document.getElementById('batchLog').innerHTML = '';
+    batchTempData = [];
+}
+
+async function analyzeBatchLinks() {
+    const links = document.getElementById('batchLinks').value.trim().split('\n').filter(l => l.trim() !== '');
+    if (links.length === 0) return alert('กรุณาวางลิงก์อย่างน้อย 1 ลิงก์');
+
+    const btn = document.getElementById('btnAnalyzeBatch');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังวิเคราะห์...';
+    
+    batchTempData = [];
+
+    for (let i = 0; i < links.length; i++) {
+        const url = links[i].trim();
+        const vid = url.match(/(?:v=|\/)([0-9A-Za-z_-]{11})/)?.[1];
+        if (!vid) continue;
+        
+        try {
+            const resAi = await secureFetch(`${API_URL}/fetch-movie-data`, {
+                method: 'POST',
+                body: JSON.stringify({ videoId: vid })
+            });
+            const jsonAi = await resAi.json();
+            if (jsonAi.success) {
+                batchTempData.push(jsonAi.data);
+            }
+        } catch (err) { console.error(err); }
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-magnifying-glass mr-2"></i> วิเคราะห์ข้อมูล (Step 1)';
+    
+    if (batchTempData.length === 0) return alert('ไม่สามารถดึงข้อมูลได้เลย กรุณาตรวจสอบลิงก์');
+    
+    // Switch to Review Step
+    document.getElementById('batchInputStep').classList.add('hidden');
+    document.getElementById('batchReviewStep').classList.remove('hidden');
+    document.getElementById('batchReviewStep').classList.add('flex');
+    renderBatchReview();
+}
+
+function renderBatchReview() {
+    const container = document.getElementById('batchReviewList');
+    container.innerHTML = batchTempData.map((item, index) => `
+        <div class="flex gap-4 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+            <img src="${item.posterUrl}" id="batch-img-${index}" class="w-20 h-28 object-cover rounded-lg bg-slate-900 shrink-0">
+            <div class="flex-1 space-y-2 min-w-0">
+                <input type="text" value="${item.title}" onchange="updateBatchItem(${index}, 'title', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-2 py-1 text-sm font-bold text-white placeholder-slate-500" placeholder="ชื่อเรื่อง">
+                <div class="flex gap-2">
+                    <input type="text" value="${item.year}" onchange="updateBatchItem(${index}, 'year', this.value)" class="w-16 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-slate-300 text-center" placeholder="ปี">
+                    <input type="text" value="${item.posterUrl}" oninput="updateBatchPoster(${index}, this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-sky-400 font-mono truncate focus:text-clip focus:overflow-visible focus:absolute focus:z-10 focus:w-auto" placeholder="URL รูปปก (แก้ไขได้)">
+                </div>
+                <div class="text-xs text-slate-500 truncate">${item.description}</div>
+            </div>
+            <button onclick="removeBatchItem(${index})" class="text-slate-500 hover:text-red-400 px-2"><i class="fa-solid fa-times"></i></button>
+        </div>
+    `).join('');
+}
+
+function updateBatchItem(index, field, value) { batchTempData[index][field] = value; }
+function updateBatchPoster(index, url) { batchTempData[index].posterUrl = url; document.getElementById(`batch-img-${index}`).src = url; }
+function removeBatchItem(index) { batchTempData.splice(index, 1); renderBatchReview(); }
+
+async function confirmBatchImport() {
+    const btn = document.getElementById('btnSaveBatch');
+    const logDiv = document.getElementById('batchLog');
+    btn.disabled = true;
+    logDiv.classList.remove('hidden');
+    logDiv.innerHTML = '';
+
+    for (let i = 0; i < batchTempData.length; i++) {
+        try {
+            const resSave = await secureFetch(`${API_URL}/movies`, {
+                method: 'POST',
+                body: JSON.stringify(batchTempData[i])
+            });
+            
+            if (resSave.ok) logDiv.innerHTML += `<div class="text-green-400 mb-1">✅ บันทึกสำเร็จ: ${batchTempData[i].title}</div>`;
+            else throw new Error('Failed');
+        } catch (err) {
+            logDiv.innerHTML += `<div class="text-red-400 mb-1">❌ ผิดพลาด: ${batchTempData[i].title}</div>`;
+        }
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    logDiv.innerHTML += `<div class="text-slate-300 mt-2">--- จบการทำงาน ---</div>`;
+    btn.disabled = false;
+    loadMovies(); // Refresh Table
+}
+
+// --- BACKUP SYSTEM ---
+async function backupDatabase() {
+    if (!confirm('ต้องการดาวน์โหลดไฟล์ Backup ฐานข้อมูลใช่หรือไม่?')) return;
+    
+    try {
+        const res = await secureFetch(`${API_URL}/backup`);
+        const json = await res.json();
+        
+        if (json.success) {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(json.data, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "duydodee_backup_" + new Date().toISOString().slice(0,10) + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        } else { alert(json.message); }
+    } catch (err) { alert('เกิดข้อผิดพลาดในการ Backup'); }
+}
+
+// --- RESTORE SYSTEM ---
+function triggerRestore() {
+    document.getElementById('restoreFile').click();
+}
+
+async function restoreDatabase(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!confirm('⚠️ คำเตือน: การกู้คืนข้อมูลจะ "ลบข้อมูลปัจจุบันทั้งหมด" และแทนที่ด้วยไฟล์ Backup\n\nคุณแน่ใจหรือไม่ที่จะดำเนินการต่อ?')) {
+        input.value = ''; // Reset input
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // ตรวจสอบโครงสร้างไฟล์คร่าวๆ
+            if (!data.timestamp || (!data.movies && !data.users)) {
+                throw new Error('รูปแบบไฟล์ไม่ถูกต้อง หรือไม่ใช่ไฟล์ Backup ของระบบนี้');
+            }
+
+            const res = await secureFetch(`${API_URL}/restore`, {
+                method: 'POST',
+                body: JSON.stringify(data)
+            });
+
+            const json = await res.json();
+            if (json.success) {
+                alert('✅ กู้คืนข้อมูลสำเร็จ! กรุณาเข้าสู่ระบบใหม่');
+                logout();
+            } else { alert(json.message); }
+        } catch (err) { alert('เกิดข้อผิดพลาด: ' + err.message); }
+        finally { input.value = ''; }
+    };
+    reader.readAsText(file);
 }
