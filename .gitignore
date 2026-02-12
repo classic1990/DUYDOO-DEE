@@ -1,0 +1,7 @@
+node_modules/
+.env
+backend-api/Movie-Streaming.js
+backend-api/*.json
+firebase-debug.log
+.DS_Store
+.vercel

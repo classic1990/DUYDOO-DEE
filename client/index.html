@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DUYDODEE 4K</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Kanit', sans-serif; }
+        .line-clamp-2 {
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.4s ease-out forwards;
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="min-h-screen bg-slate-900 text-slate-200 selection:bg-red-500/30">
+
+    <div id="announcement-bar"></div>
+    <div id="navbar"></div>
+    <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    </main>
+    <div id="modal-container"></div>
+
+    <script>
+    // --- FIREBASE CONFIG ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyBuhTA1YwcsNyxR0NLYW6JrxUQ9U7vyVeo",
+        authDomain: "classic-e8ab7.firebaseapp.com",
+        projectId: "classic-e8ab7",
+        storageBucket: "classic-e8ab7.firebasestorage.app",
+        messagingSenderId: "596308927760",
+        appId: "1:596308927760:web:63043fd2786459082cb195",
+        measurementId: "G-RCDSPGQ5LE"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+
+    // --- STATE MANAGEMENT ---
+    const state = {
+        view: 'home', // 'home', 'player'
+        user: null,
+        movies: [],
+        myList: [],
+        filteredMovies: [],
+        currentMovie: null,
+        searchQuery: '',
+        activeCategory: 'all',
+        isLoginModalOpen: false,
+        isMenuOpen: false,
+        showAnnouncement: true,
+        announcement: { text: '', color: 'orange' }
+    };
+
+    // --- DOM ELEMENTS ---
+    const mainContent = document.getElementById('main-content');
+    const navbarContainer = document.getElementById('navbar');
+    const modalContainer = document.getElementById('modal-container');
+    const announcementBarContainer = document.getElementById('announcement-bar');
+
+    // --- RENDER FUNCTIONS ---
+
+    function render() {
+        renderNavbar();
+        renderAnnouncement();
+        if (state.view === 'home') {
+            renderHomePage();
+        } else if (state.view === 'player') {
+            renderPlayerPage();
+        }
+        renderLoginModal();
+    }
+
+    function setState(newState) {
+        Object.assign(state, newState);
+        filterMovies();
+        render();
+    }
+
+    function renderAnnouncement() {
+        if (!state.showAnnouncement || !state.announcement.text) {
+            announcementBarContainer.innerHTML = '';
+            return;
+        }
+        announcementBarContainer.innerHTML = `
+            <div class="bg-gradient-to-r from-orange-600 to-red-600 text-white text-xs md:text-sm py-2 relative z-50">
+                <div class="max-w-7xl mx-auto px-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3 overflow-hidden">
+                        <span class="bg-white/20 px-2 py-0.5 rounded font-bold uppercase tracking-wider text-[10px]">Announcement</span>
+                        <div class="truncate font-medium">${state.announcement.text}</div>
+                    </div>
+                    <button onclick="setState({ showAnnouncement: false })" class="hover:bg-white/20 p-1 rounded transition ml-4">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderNavbar() {
+        const categories = [
+            { id: 'all', label: 'หน้าแรก', icon: 'fa-tv' },
+            { id: 'top', label: 'จัดอันดับ', icon: 'fa-ranking-star' },
+            { id: 'china', label: 'ซีรีส์จีน', icon: 'fa-globe' },
+            { id: 'inter', label: 'พากย์ไทย/ฝรั่ง', icon: 'fa-film' },
+            { id: 'anime', label: 'อนิเมะ', icon: 'fa-ghost' },
+            { id: 'mylist', label: 'รายการโปรด', icon: 'fa-heart' }
+        ];
+
+        navbarContainer.innerHTML = `
+            <nav class="sticky top-0 z-40 bg-slate-900/80 backdrop-blur-xl border-b border-white/5">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex items-center justify-between h-16">
+                        <!-- Logo -->
+                        <div class="flex items-center gap-8">
+                            <button onclick="setState({ view: 'home' })" class="flex items-center gap-2 group">
+                                <div class="bg-gradient-to-tr from-red-500 to-rose-600 p-2 rounded-lg group-hover:shadow-lg group-hover:shadow-red-500/30 transition-all duration-300">
+                                    <i class="fa-solid fa-play text-white"></i>
+                                </div>
+                                <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                                    DUYDODEE<span class="text-red-400">4K</span>
+                                </span>
+                            </button>
+                            
+                            <!-- Desktop Menu -->
+                            <div class="hidden md:flex items-center space-x-1">
+                                ${categories.map(cat => `
+                                    <button onclick="setCategory('${cat.id}')" 
+                                        class="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${state.activeCategory === cat.id ? 'bg-red-500/10 text-red-400' : 'text-slate-400 hover:text-white hover:bg-white/5'}">
+                                        <i class="fa-solid ${cat.icon}"></i> ${cat.label}
+                                    </button>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <!-- Search & Profile -->
+                        <div class="flex items-center gap-4">
+                            <div class="relative hidden sm:block group">
+                                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-500 group-focus-within:text-red-400 transition-colors text-xs"></i>
+                                <input type="text" placeholder="ค้นหาซีรีส์..." 
+                                    value="${state.searchQuery}"
+                                    oninput="handleSearch(this.value)"
+                                    class="bg-slate-800/50 border border-slate-700/50 rounded-full py-2 pl-9 pr-4 text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:bg-slate-800 transition-all w-48 focus:w-64">
+                            </div>
+
+                            ${state.user ? `
+                                <div class="flex items-center gap-3 bg-slate-800/50 pl-4 pr-2 py-1.5 rounded-full border border-white/5">
+                                    <div class="text-right hidden sm:block">
+                                        <div class="text-[10px] text-slate-400 uppercase tracking-wider">Welcome</div>
+                                        <div class="text-sm font-bold text-red-400 flex items-center gap-1">
+                                            ${state.user.username || state.user.email}
+                                            ${state.user.isVip ? '<i class="fa-solid fa-crown text-yellow-400 text-xs"></i>' : ''}
+                                        </div>
+                                    </div>
+                                    <button onclick="handleLogout()" class="p-2 bg-red-500/10 text-red-400 rounded-full hover:bg-red-500 hover:text-white transition-colors">
+                                        <i class="fa-solid fa-right-from-bracket"></i>
+                                    </button>
+                                </div>
+                            ` : `
+                                <button onclick="setState({ isLoginModalOpen: true })" class="bg-red-600 hover:bg-red-500 text-white px-5 py-2 rounded-full text-sm font-semibold transition-all shadow-lg shadow-red-900/20 hover:shadow-red-600/30 flex items-center gap-2">
+                                    <i class="fa-regular fa-user"></i> เข้าสู่ระบบ
+                                </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+        `;
+    }
+
+    function renderHomePage() {
+        // Hero Section (Top Rated Movie)
+        let heroHtml = '';
+        if (!state.searchQuery && state.activeCategory === 'all' && state.filteredMovies.length > 0) {
+            const heroMovie = state.filteredMovies.reduce((prev, current) => (prev.rating > current.rating) ? prev : current);
+            const isInList = state.myList.some(m => m._id === heroMovie._id);
+            heroHtml = `
+                <div class="relative w-full h-[50vh] md:h-[60vh] overflow-hidden rounded-3xl mb-12 group cursor-pointer shadow-2xl" onclick="openPlayer('${heroMovie._id}')">
+                    <div class="absolute inset-0">
+                        <img src="${heroMovie.posterUrl}" class="w-full h-full object-cover transform group-hover:scale-105 transition duration-700" alt="${heroMovie.title}">
+                        <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/40 to-transparent"></div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 p-8 md:p-12 max-w-2xl w-full z-10">
+                        <span class="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block shadow-lg shadow-red-500/30">Trending Now</span>
+                        <h1 class="text-3xl md:text-5xl font-bold text-white mb-4 leading-tight drop-shadow-lg">${heroMovie.title}</h1>
+                        <p class="text-slate-300 text-sm md:text-lg line-clamp-2 mb-6 drop-shadow-md">${heroMovie.description || 'ไม่มีคำอธิบาย'}</p>
+                        <div class="flex items-center gap-4">
+                            <button class="bg-white text-slate-900 hover:bg-red-50 px-8 py-3 rounded-xl font-bold flex items-center gap-2 transition-colors shadow-lg">
+                                <i class="fa-solid fa-play"></i> ดูเลย
+                            </button>
+                            <button onclick="event.stopPropagation(); toggleMyList('${heroMovie._id}')" class="bg-white/10 backdrop-blur-md text-white hover:bg-white/20 px-6 py-3 rounded-xl font-semibold transition-colors border border-white/10 flex items-center gap-2">
+                                <i class="${isInList ? 'fa-solid text-red-500' : 'fa-regular'} fa-heart"></i> ${isInList ? 'ลบจากรายการ' : 'รายการโปรด'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // คำนวณ Top 10 Weekly Views สำหรับป้าย HOT (คำนวณจากหนังทั้งหมด)
+        const top10WeeklyIds = [...state.movies]
+            .sort((a, b) => (b.weeklyViewCount || 0) - (a.weeklyViewCount || 0))
+            .slice(0, 10)
+            .map(m => m._id);
+
+        // Movies Grid
+        const moviesHtml = state.filteredMovies.length > 0 ? `
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                ${state.filteredMovies.map(movie => {
+                    const isInList = state.myList.some(m => m._id === movie._id);
+
+                    // Badge Logic
+                    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+                    const isNew = movie.createdAt && movie.createdAt.toDate() > sevenDaysAgo;
+                    // Hot ถ้าติด Top 10 รายสัปดาห์ และมียอดวิวมากกว่า 0 (และไม่ใช่หนังใหม่)
+                    const isHot = !isNew && top10WeeklyIds.includes(movie._id) && (movie.weeklyViewCount || 0) > 0;
+
+                    return `
+                    <div onmouseenter="handleMouseEnter(this, '${movie.ytId || ''}')" onmouseleave="handleMouseLeave(this)" onclick="openPlayer('${movie._id}')" class="group relative bg-slate-800 rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-red-900/20 border border-slate-700/50 hover:border-red-500/30">
+                        <div class="aspect-[2/3] relative overflow-hidden">
+                            <img src="${movie.posterUrl}" alt="${movie.title}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
+                            
+                            <!-- Trailer Preview (Auto Play on Hover) -->
+                            <div class="trailer-preview absolute inset-0 z-0 pointer-events-none transition-opacity duration-500 opacity-0 bg-black"></div>
+
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity"></div>
+                            
+                            <!-- Play Icon Overlay -->
+                            <div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black/40 backdrop-blur-[2px]">
+                                <div class="bg-red-500/90 w-12 h-12 flex items-center justify-center rounded-full shadow-lg transform scale-50 group-hover:scale-100 transition-transform">
+                                    <i class="fa-solid fa-play text-white ml-1"></i>
+                                </div>
+                            </div>
+
+                            <!-- Badges -->
+                            <div class="absolute top-2 left-2 flex flex-col gap-1.5 z-10">
+                                ${isNew ? `
+                                    <div class="bg-gradient-to-r from-sky-400 to-cyan-500 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg flex items-center gap-1 animate-fade-in">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> NEW
+                                    </div>
+                                ` : ''}
+                                ${isHot ? `
+                                    <div class="bg-gradient-to-r from-orange-500 to-red-600 text-white text-[10px] font-black px-2 py-1 rounded shadow-lg flex items-center gap-1 animate-fade-in">
+                                        <i class="fa-solid fa-fire"></i> HOT
+                                    </div>
+                                ` : ''}
+                                ${movie.isVip ? `
+                                    <div class="bg-gradient-to-r from-amber-400 to-yellow-500 text-black text-[10px] font-black px-2 py-1 rounded shadow-lg flex items-center gap-1">
+                                        <i class="fa-solid fa-crown"></i> VIP
+                                    </div>
+                                ` : ''}
+                            </div>
+
+                            <button onclick="event.stopPropagation(); toggleMyList('${movie._id}')" class="absolute top-2 right-2 z-20 p-1.5 rounded-lg bg-black/60 hover:bg-white hover:text-red-500 text-white transition backdrop-blur-sm ${isInList ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}">
+                                <i class="${isInList ? 'fa-solid text-red-500' : 'fa-regular'} fa-heart"></i>
+                            </button>
+                            <div class="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-yellow-400 text-xs font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                                <i class="fa-solid fa-star"></i> ${movie.rating}
+                            </div>
+                        </div>
+                        <div class="p-4">
+                            <h3 class="text-white font-semibold truncate group-hover:text-red-400 transition-colors text-sm md:text-base">${movie.title}</h3>
+                            <div class="flex justify-between items-center mt-2 text-xs text-slate-400">
+                                <div class="flex items-center gap-2">
+                                    <span class="capitalize">${movie.category}</span>
+                                    <span class="flex items-center gap-1 text-slate-500"><i class="fa-regular fa-eye"></i> ${movie.viewCount || 0}</span>
+                                </div>
+                                <span class="border border-slate-700 px-1.5 py-0.5 rounded text-[10px]">HD</span>
+                            </div>
+                        </div>
+                    </div>
+            `}).join('')}
+            </div>
+        ` : `
+            <div class="text-center py-20 bg-slate-800/30 rounded-3xl border border-dashed border-slate-700">
+                <i class="fa-solid fa-film text-6xl text-slate-700 mb-4"></i>
+                <p class="text-slate-400">${state.activeCategory === 'mylist' ? 'ยังไม่มีรายการโปรด' : 'ไม่พบซีรีส์ที่คุณค้นหา'}</p>
+            </div>
+        `;
+
+        mainContent.innerHTML = `
+            <div class="animate-fade-in">
+                ${heroHtml}
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+                        ${state.searchQuery ? `ผลการค้นหา "${state.searchQuery}"` : 
+                          state.activeCategory === 'mylist' ? `<span class="w-1.5 h-8 bg-red-500 rounded-full"></span> รายการโปรดของฉัน` : 
+                          state.activeCategory === 'top' ? `<span class="w-1.5 h-8 bg-yellow-500 rounded-full"></span> 10 อันดับยอดนิยมประจำสัปดาห์` :
+                          `<span class="w-1.5 h-8 bg-red-500 rounded-full"></span> รายการทั้งหมด`}
+                    </h2>
+                    <div class="text-sm text-slate-500">ทั้งหมด ${state.filteredMovies.length} เรื่อง</div>
+                </div>
+                ${moviesHtml}
+            </div>
+        `;
+    }
+
+    function renderPlayerPage() {
+        const m = state.currentMovie;
+        if (!m) return;
+        const isInList = state.myList.some(item => item._id === m._id);
+
+        mainContent.innerHTML = `
+            <div class="animate-fade-in pb-12">
+                <button onclick="setState({ view: 'home' })" class="group flex items-center gap-2 text-slate-400 hover:text-white mb-6 px-4 py-2 rounded-lg hover:bg-slate-800/50 transition-all w-fit">
+                    <i class="fa-solid fa-chevron-left group-hover:-translate-x-1 transition-transform"></i> กลับหน้าหลัก
+                </button>
+
+                <div class="bg-black rounded-3xl overflow-hidden shadow-2xl border border-slate-800 aspect-video mb-8 relative group">
+                    <iframe class="w-full h-full" src="https://www.youtube.com/embed/${m.ytId}?autoplay=1&rel=0&modestbranding=1" title="${m.title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-8">
+                    <div class="md:col-span-2">
+                        <h1 class="text-3xl md:text-4xl font-bold text-white mb-4">${m.title}</h1>
+                        <div class="flex flex-wrap gap-3 mb-6 text-sm">
+                            <span class="bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 px-3 py-1 rounded-md flex items-center gap-1"><i class="fa-solid fa-star"></i> ${m.rating}</span>
+                            <span class="bg-red-500/10 text-red-400 px-3 py-1 rounded-md capitalize">${m.category}</span>
+                            ${m.isVip ? '<span class="bg-gradient-to-r from-amber-400 to-amber-600 text-black font-bold px-3 py-1 rounded-md flex items-center gap-1"><i class="fa-solid fa-crown"></i> VIP ONLY</span>' : ''}
+                            <button onclick="shareMovie('${m._id}')" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1 rounded-md flex items-center gap-2 transition ml-auto md:ml-0">
+                                <i class="fa-solid fa-share-nodes text-sky-400"></i> แชร์
+                            </button>
+                            <button onclick="toggleMyList('${m._id}')" class="bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 px-3 py-1 rounded-md flex items-center gap-2 transition">
+                                <i class="${isInList ? 'fa-solid text-red-500' : 'fa-regular'} fa-heart"></i> ${isInList ? 'บันทึกแล้ว' : 'เก็บไว้ดู'}
+                            </button>
+                        </div>
+                        <div class="bg-slate-800/50 p-6 rounded-2xl border border-white/5">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2"><i class="fa-solid fa-circle-info text-red-500"></i> เรื่องย่อ</h3>
+                            <p class="text-slate-300 leading-relaxed">${m.description || 'ไม่มีข้อมูลเรื่องย่อ'}</p>
+                        </div>
+                    </div>
+                    <div class="md:col-span-1">
+                        <div class="bg-slate-800/50 rounded-2xl p-6 border border-white/5 h-full">
+                            <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-list-ol text-red-500"></i> ตอนที่เลือก</h3>
+                            <div class="grid grid-cols-4 gap-2">
+                                <button class="py-2 rounded-lg text-sm font-medium bg-red-600 text-white shadow-lg shadow-red-900/50">1</button>
+                                <!-- Mock Episodes -->
+                                ${[2,3,4,5,6,7,8].map(i => `<button class="py-2 rounded-lg text-sm font-medium bg-slate-700/50 text-slate-400 hover:bg-slate-700 hover:text-white transition">${i}</button>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderLoginModal() {
+        if (!state.isLoginModalOpen) {
+            modalContainer.innerHTML = '';
+            return;
+        }
+        modalContainer.innerHTML = `
+            <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="setState({ isLoginModalOpen: false })"></div>
+                <div class="bg-slate-900 border border-slate-700 w-full max-w-sm p-8 rounded-3xl relative shadow-2xl animate-fade-in transform scale-100">
+                    <button onclick="setState({ isLoginModalOpen: false })" class="absolute top-4 right-4 text-slate-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                    <div class="text-center mb-8">
+                        <div class="inline-flex bg-gradient-to-tr from-red-500 to-rose-600 p-4 rounded-2xl mb-4 shadow-lg shadow-red-500/20">
+                            <i class="fa-solid fa-crown text-3xl text-white"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white">VIP LOGIN</h3>
+                        <p class="text-slate-400 text-sm mt-2">เข้าสู่ระบบเพื่อรับชมเนื้อหาพิเศษ</p>
+                    </div>
+                    <div class="space-y-4">
+                        <button onclick="handleGoogleLogin()" class="w-full bg-white hover:bg-slate-100 text-slate-900 font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-3 shadow-lg transform active:scale-95 duration-200">
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6">
+                            เข้าสู่ระบบด้วย Google
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- LOGIC & HANDLERS ---
+
+    function setCategory(cat) {
+        setState({ activeCategory: cat, view: 'home' });
+    }
+
+    function handleSearch(val) {
+        setState({ searchQuery: val, view: 'home' });
+    }
+
+    function openPlayer(id) {
+        const movie = state.movies.find(m => m._id === id);
+        if (movie.isVip && (!state.user || !state.user.isVip)) {
+            setState({ isLoginModalOpen: true });
+            return;
+        }
+        setState({ currentMovie: movie, view: 'player' });
+        window.scrollTo(0, 0);
+
+        // เพิ่มยอดวิว (View Count) ลง Firestore
+        db.collection('movies').doc(id).update({
+            viewCount: firebase.firestore.FieldValue.increment(1),
+            weeklyViewCount: firebase.firestore.FieldValue.increment(1) // เก็บยอดวิวรายสัปดาห์ด้วย
+        }).catch(err => console.error("Error updating view count:", err));
+    }
+
+    function shareMovie(id) {
+        const url = `${window.location.origin}${window.location.pathname}?movie=${id}`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('คัดลอกลิงก์เรียบร้อย! ส่งให้เพื่อนได้เลยครับ');
+        }).catch(err => console.error('Copy failed', err));
+    }
+
+    async function handleGoogleLogin() {
+        try {
+            await auth.signInWithPopup(provider);
+            setState({ isLoginModalOpen: false });
+        } catch (error) {
+            console.error("Login failed:", error);
+            alert("เข้าสู่ระบบไม่สำเร็จ: " + error.message);
+        }
+    }
+
+    async function handleLogout() {
+        try {
+            await auth.signOut();
+        } catch (error) {
+            console.error("Logout failed:", error);
+        }
+    }
+
+    function filterMovies() {
+        let result = [...state.movies]; // คัดลอก Array เพื่อไม่ให้กระทบข้อมูลหลักเวลา Sort
+        if (state.activeCategory === 'mylist') {
+            result = state.myList;
+        } else if (state.activeCategory === 'top') {
+            // เรียงตาม weeklyViewCount จากมากไปน้อย และตัดมา 10 อันดับ
+            result = result.sort((a, b) => (b.weeklyViewCount || 0) - (a.weeklyViewCount || 0)).slice(0, 10);
+        } else if (state.activeCategory !== 'all') {
+            result = result.filter(m => m.category === state.activeCategory);
+        }
+        if (state.searchQuery) {
+            result = result.filter(m => m.title.toLowerCase().includes(state.searchQuery.toLowerCase()));
+        }
+        state.filteredMovies = result;
+        render();
+    }
+
+    async function fetchMovies() {
+        try {
+            const snapshot = await db.collection('movies').orderBy('createdAt', 'desc').get();
+            const movies = snapshot.docs.map(doc => ({
+                _id: doc.id, // Map Firestore ID to _id for frontend compatibility
+                ...doc.data()
+            }));
+            setState({ movies });
+
+            // Check for shared link
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedId = urlParams.get('movie');
+            if (sharedId) {
+                const movie = movies.find(m => m._id === sharedId);
+                if (movie) openPlayer(sharedId);
+            }
+        } catch (error) {
+            console.error("Failed to fetch movies from Firestore:", error);
+        }
+    }
+
+    function toggleMyList(id) {
+        const existingIndex = state.myList.findIndex(m => m._id === id);
+        if (existingIndex !== -1) {
+            state.myList.splice(existingIndex, 1);
+        } else {
+            const movie = state.movies.find(m => m._id === id) || state.currentMovie;
+            if (movie) state.myList.push(movie);
+        }
+        localStorage.setItem('duydodee_mylist', JSON.stringify(state.myList));
+        
+        if (state.activeCategory === 'mylist') filterMovies();
+        else render();
+    }
+
+    async function fetchAnnouncement() {
+        try {
+            // ดึงประกาศล่าสุดจาก Firestore (สมมติว่าเก็บใน collection ชื่อ 'announcements')
+            // คุณอาจต้องปรับ query นี้ให้ตรงกับโครงสร้างข้อมูลจริงใน Admin ของคุณ
+            const snapshot = await db.collection('announcements').limit(1).get();
+            
+            if (!snapshot.empty) {
+                const data = snapshot.docs[0].data();
+                setState({ 
+                    announcement: data,
+                    showAnnouncement: data.isActive 
+                });
+            }
+        } catch (error) { console.error("Failed to fetch announcement:", error); }
+    }
+
+    // --- TRAILER SYSTEM ---
+    let trailerTimeout;
+
+    function handleMouseEnter(el, ytId) {
+        if (!ytId) return;
+        clearTimeout(trailerTimeout);
+        
+        // Delay 500ms before playing to avoid loading on quick scroll
+        trailerTimeout = setTimeout(() => {
+            const container = el.querySelector('.trailer-preview');
+            if (container) {
+                // Zoomed Iframe to fill vertical card (Center Crop)
+                container.innerHTML = `
+                    <iframe 
+                        src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&loop=1&playlist=${ytId}" 
+                        class="w-[300%] h-full absolute top-0 left-1/2 -translate-x-1/2 object-cover pointer-events-none" 
+                        frameborder="0" 
+                        allow="autoplay; encrypted-media">
+                    </iframe>
+                `;
+                container.classList.remove('opacity-0');
+            }
+        }, 500);
+    }
+
+    function handleMouseLeave(el) {
+        clearTimeout(trailerTimeout);
+        const container = el.querySelector('.trailer-preview');
+        if (container) {
+            container.classList.add('opacity-0');
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 300);
+        }
+    }
+
+    // --- INIT ---
+    window.onload = () => {
+        // ตรวจสอบสถานะ Login จริงจาก Firebase
+        auth.onAuthStateChanged(async (firebaseUser) => {
+            if (firebaseUser) {
+                // บันทึกข้อมูลผู้ใช้ลง Firestore และเช็คสถานะ VIP
+                let isVip = false;
+                try {
+                    const userRef = db.collection('users').doc(firebaseUser.uid);
+                    
+                    // 1. บันทึก/อัปเดตข้อมูลผู้ใช้ (เพื่อให้ Admin เห็นในรายชื่อ)
+                    await userRef.set({
+                        username: firebaseUser.displayName || 'Anonymous',
+                        email: firebaseUser.email,
+                        photoUrl: firebaseUser.photoURL,
+                        lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+                    }, { merge: true });
+
+                    // 2. ดึงสถานะ VIP
+                    const userDoc = await userRef.get();
+                    if (userDoc.exists) isVip = userDoc.data().isVip || false;
+                } catch (e) { console.log("User data fetch error", e); }
+
+                setState({ 
+                    user: {
+                        uid: firebaseUser.uid,
+                        username: firebaseUser.displayName,
+                        email: firebaseUser.email,
+                        photoUrl: firebaseUser.photoURL,
+                        isVip: isVip
+                    } 
+                });
+            } else {
+                setState({ user: null });
+            }
+        });
+
+        const savedList = localStorage.getItem('duydodee_mylist');
+        if (savedList) state.myList = JSON.parse(savedList);
+        fetchMovies();
+        fetchAnnouncement();
+    };
+
+    </script>
+</body>
+</html>

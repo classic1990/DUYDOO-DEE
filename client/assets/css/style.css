@@ -1,0 +1,58 @@
+<style>
+    :root {
+        --primary: #0ea5e9;
+        --accent: #10b981;
+        --bg-dark: #020617;
+    }
+
+    /* การ์ดซีรีส์แนวตั้งแบบพรีเมียม */
+    .series-card {
+        position: relative;
+        border-radius: 1.5rem;
+        overflow: hidden;
+        transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .series-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 40px rgba(14, 165, 233, 0.2);
+        border-color: var(--primary);
+    }
+
+    /* เอฟเฟกต์เงาซ้อนเลเยอร์ (Overlay) */
+    .card-overlay {
+        background: linear-gradient(to top, rgba(2, 6, 23, 1) 10%, rgba(2, 6, 23, 0) 80%);
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 1.5rem;
+        opacity: 0.9;
+    }
+
+    /* ป้าย VIP สุดหรู */
+    .vip-badge {
+        background: linear-gradient(45deg, #f59e0b, #fbbf24);
+        color: #78350f;
+        padding: 2px 10px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        box-shadow: 0 0 15px rgba(245, 158, 11, 0.4);
+    }
+</style>
+
+<div class="series-card aspect-[9/16] group cursor-pointer">
+    <img src="URL_รูปจาก_YouTube" class="w-full h-full object-cover">
+    <div class="card-overlay">
+        <div class="flex items-center gap-2 mb-2">
+            <span class="vip-badge">VIP</span>
+            <span class="text-[10px] text-sky-400 font-bold tracking-widest uppercase">ตอนใหม่ล่าสุด</span>
+        </div>
+        <h3 class="text-white font-bold text-lg leading-tight group-hover:text-sky-400 transition">ชื่อเรื่องซีรีส์จีนสุดมันส์</h3>
+        <p class="text-slate-400 text-xs mt-1 line-clamp-2">เรื่องย่อที่ AI เจนมาจะโชว์ตรงนี้สั้นๆ...</p>
+    </div>
+</div>

@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. ฟังก์ชันตรวจสอบว่าเป็น Admin หรือไม่ (เช็คจากอีเมล)
+    // ต้องตรงกับที่ใช้ใน server.js และ login.html
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == 'duy.kan1234@gmail.com';
+    }
+
+    // 2. Collection: movies (หนัง)
+    match /movies/{movieId} {
+      // ทุกคนอ่านข้อมูลหนังได้ (Public Read)
+      allow read: if true;
+
+      // เฉพาะ Admin เท่านั้นที่ เพิ่ม หรือ ลบ หนังได้
+      allow create, delete: if isAdmin();
+
+      // การแก้ไข (Update)
+      allow update: if isAdmin() || (
+        // อนุญาตให้ User ทั่วไปอัปเดตได้ "เฉพาะ" ยอดวิวเท่านั้น
+        // (ป้องกันไม่ให้แอบแก้ชื่อหนัง หรือเปลี่ยนลิงก์ YouTube)
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewCount', 'weeklyViewCount'])
+      );
+    }
+
+    // 3. Collection: announcements (ประกาศ)
+    match /announcements/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 4. Collection: users (ข้อมูลผู้ใช้)
+    match /users/{userId} {
+      // Admin อ่านได้ทุกคน / เจ้าของบัญชีอ่านได้แค่ของตัวเอง
+      allow read: if isAdmin() || (request.auth != null && request.auth.uid == userId);
+
+      // Admin เขียนได้ทุกอย่าง (รวมถึงแก้สถานะ VIP)
+      allow write: if isAdmin();
+
+      // เจ้าของบัญชี แก้ไขข้อมูลตัวเองได้ แต่ "ห้าม" แตะต้องฟิลด์ isVip
+      allow create: if request.auth != null && request.auth.uid == userId && (!('isVip' in request.resource.data) || request.resource.data.isVip == false);
+      allow update: if request.auth != null && request.auth.uid == userId && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVip']));
+    }
+  }
+}

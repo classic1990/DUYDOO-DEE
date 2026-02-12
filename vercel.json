@@ -1,0 +1,21 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/server.js"
+    }
+  ],
+  "functions": {
+    "server.js": {
+      "includeFiles": "client/**"
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/reset-weekly",
+      "schedule": "0 0 * * 0"
+    }
+  ]
+  }
+}
