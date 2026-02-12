@@ -5,7 +5,7 @@ service cloud.firestore {
     // 1. ฟังก์ชันตรวจสอบว่าเป็น Admin หรือไม่ (เช็คจากอีเมล)
     // ต้องตรงกับที่ใช้ใน server.js และ login.html
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == 'duy.kan1234@gmail.com';
+      return request.auth != null && request.auth.token.email == 'YOUR_EMAIL@gmail.com';
     }
 
     // 2. Collection: movies (หนัง)

@@ -20,23 +20,22 @@
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         input, select, textarea { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
-        input:focus { border-color: #0ea5e9 !important; ring: 2px #0ea5e9; }
-        .active-nav { background: #0284c7 !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.2); }
+        input:focus { border-color: #ef4444 !important; ring: 2px #ef4444; }
+        .active-nav { background: #dc2626 !important; color: white !important; box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.2); }
         .section-animate { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         #uploadLoading { display: none; background: rgba(0,0,0,0.7); }
         
-        /* เพิ่มเอฟเฟกต์รูปปกแจ่มๆ */
         #posterPreview { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 1.5rem; }
-        .glow-sky { box-shadow: 0 0 25px rgba(14, 165, 233, 0.3); border: 2px solid #0ea5e9; }
+        .glow-red { box-shadow: 0 0 25px rgba(239, 68, 68, 0.3); border: 2px solid #ef4444; }
     </style>
 </head>
 <body class="custom-scrollbar min-h-screen">
 
     <div class="flex flex-col md:flex-row">
         <aside class="w-full md:w-72 md:h-screen sticky top-0 bg-slate-950/90 p-6 border-r border-slate-800 backdrop-blur-xl z-50">
-            <div class="text-2xl font-bold text-sky-500 mb-10 flex items-center gap-2">
-                <i class="fa-solid fa-screwdriver-wrench text-sky-400"></i> ADMIN<span class="text-white">4K</span>
+            <div class="text-2xl font-bold text-red-500 mb-10 flex items-center gap-2">
+                <i class="fa-solid fa-screwdriver-wrench text-red-400"></i> ADMIN<span class="text-white">4K</span>
             </div>
             <nav class="space-y-2">
                 <button onclick="showSection('movies')" id="nav-movies" class="active-nav w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition text-left">
@@ -78,10 +77,10 @@
                 <div id="userProfile" class="flex items-center gap-4 glass px-5 py-2.5 rounded-2xl border border-white/10 shadow-2xl transition-all duration-500 opacity-0 transform translate-x-5">
                     <div class="text-right hidden sm:block">
                         <p id="profileName" class="text-sm font-bold text-white"></p>
-                        <p id="profileRole" class="text-[10px] text-sky-400 font-bold uppercase tracking-wider"></p>
+                        <p id="profileRole" class="text-[10px] text-red-400 font-bold uppercase tracking-wider"></p>
                     </div>
                     <div class="relative group">
-                        <img id="profileImage" src="" class="w-11 h-11 rounded-full border-2 border-sky-500/30 object-cover cursor-pointer hover:border-sky-400 transition">
+                        <img id="profileImage" src="" class="w-11 h-11 rounded-full border-2 border-red-500/30 object-cover cursor-pointer hover:border-red-400 transition">
                         <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-slate-950 rounded-full"></div>
                     </div>
                 </div>
@@ -89,7 +88,7 @@
 
             <div id="moviesSection" class="section-animate">
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                    <div class="glass p-6 rounded-3xl border-l-4 border-sky-500 shadow-xl">
+                    <div class="glass p-6 rounded-3xl border-l-4 border-red-500 shadow-xl">
                         <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">เรื่องทั้งหมด</p>
                         <h3 class="text-4xl font-bold mt-1" id="statTotal">0</h3>
                     </div>
@@ -97,7 +96,7 @@
                         <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">VIP Only</p>
                         <h3 class="text-4xl font-bold mt-1" id="statVip">0</h3>
                     </div>
-                    <button onclick="openAddModal()" class="bg-sky-600 hover:bg-sky-500 text-white font-bold py-4 rounded-3xl transition shadow-xl shadow-sky-900/30 flex items-center justify-center gap-3">
+                    <button onclick="openAddModal()" class="bg-red-600 hover:bg-red-500 text-white font-bold py-4 rounded-3xl transition shadow-xl shadow-red-900/30 flex items-center justify-center gap-3">
                         <i class="fa-solid fa-plus-circle text-xl"></i> เพิ่มเรื่องใหม่
                     </button>
                     <button onclick="openBatchModal()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-3xl transition shadow-xl shadow-purple-900/30 flex items-center justify-center gap-3">
@@ -105,9 +104,8 @@
                     </button>
                 </div>
 
-                <!-- Chart Section -->
                 <div class="mb-10 glass p-6 rounded-3xl shadow-xl max-w-2xl mx-auto lg:mx-0">
-                    <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6"><i class="fa-solid fa-chart-simple text-sky-500"></i> 10 อันดับหนังยอดนิยม (View Count)</h3>
+                    <h3 class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-6"><i class="fa-solid fa-chart-simple text-red-500"></i> 10 อันดับหนังยอดนิยม (View Count)</h3>
                     <div class="h-64 w-full">
                         <canvas id="categoryChart"></canvas>
                     </div>
@@ -115,9 +113,9 @@
 
                 <div class="glass rounded-3xl overflow-hidden shadow-2xl">
                     <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-list text-sky-500"></i> รายการวิดีโอในคลัง</h2>
+                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-list text-red-500"></i> รายการวิดีโอในคลัง</h2>
                         <div class="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-                            <select id="categoryFilter" onchange="filterAdmin()" class="px-4 py-2.5 rounded-2xl outline-none cursor-pointer bg-slate-900 border border-slate-800 text-slate-300 focus:border-sky-500">
+                            <select id="categoryFilter" onchange="filterAdmin()" class="px-4 py-2.5 rounded-2xl outline-none cursor-pointer bg-slate-900 border border-slate-800 text-slate-300 focus:border-red-500">
                                 <option value="all">ทั้งหมด</option>
                                 <option value="china">ซีรีส์จีน</option>
                                 <option value="inter">พากย์ไทย/ฝรั่ง</option>
@@ -143,7 +141,6 @@
                             <tbody id="adminTableBody" class="divide-y divide-slate-800"></tbody>
                         </table>
                     </div>
-                    <!-- Pagination Controls -->
                     <div class="p-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <span class="text-slate-400 text-sm" id="pageInfo">กำลังโหลด...</span>
                         <div class="flex gap-2">
@@ -157,7 +154,7 @@
             <div id="usersSection" class="hidden section-animate">
                 <div class="glass rounded-3xl overflow-hidden shadow-2xl">
                     <div class="p-6 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-users text-sky-500"></i> รายชื่อผู้ใช้งาน</h2>
+                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-users text-red-500"></i> รายชื่อผู้ใช้งาน</h2>
                         <div class="relative w-full sm:w-80">
                             <i class="fa-solid fa-magnifying-glass absolute left-4 top-3.5 text-slate-500"></i>
                             <input type="text" oninput="searchUsers()" id="userSearch" placeholder="ค้นหาชื่อหรืออีเมล..." class="w-full pl-12 pr-4 py-2.5 rounded-2xl outline-none">
@@ -178,10 +175,11 @@
                     </div>
                 </div>
             </div>
+
             <div id="announcementSection" class="hidden section-animate">
                 <div class="glass rounded-3xl overflow-hidden shadow-2xl max-w-3xl mx-auto">
                     <div class="p-6 border-b border-slate-800">
-                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-bullhorn text-sky-500"></i> จัดการประกาศหน้าเว็บ</h2>
+                        <h2 class="font-bold text-lg flex items-center gap-2"><i class="fa-solid fa-bullhorn text-red-500"></i> จัดการประกาศหน้าเว็บ</h2>
                     </div>
                     <div class="p-8 space-y-6">
                         <div>
@@ -192,16 +190,15 @@
                             <label for="announcementActive" class="font-bold text-white cursor-pointer">เปิดใช้งานประกาศนี้</label>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="announcementActive" class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
+                                <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
                             </label>
                         </div>
-                        <button onclick="saveAnnouncement()" class="w-full py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-2xl transition shadow-xl shadow-sky-900/30 flex items-center justify-center gap-2">
+                        <button onclick="saveAnnouncement()" class="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-2xl transition shadow-xl shadow-red-900/30 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-save"></i> บันทึกประกาศ
                         </button>
                     </div>
                 </div>
             </div>
-
         </main>
     </div>
 
@@ -210,12 +207,12 @@
             <button onclick="closeModal()" class="absolute top-8 right-10 text-slate-500 hover:text-white text-4xl">&times;</button>
             <h3 class="text-3xl font-bold mb-10 flex items-center gap-3" id="modalTitle">ข้อมูลซีรีส์</h3>
             
-            <div class="mb-10 p-6 bg-sky-500/5 border border-sky-500/10 rounded-[2rem] flex flex-col md:flex-row gap-4 items-center">
+            <div class="mb-10 p-6 bg-red-500/5 border border-red-500/10 rounded-[2rem] flex flex-col md:flex-row gap-4 items-center">
                 <div class="flex-1 w-full relative">
                     <i class="fa-brands fa-youtube absolute left-5 top-4.5 text-red-500 text-xl"></i>
                     <input type="text" id="aiUrl" placeholder="วางลิงก์ YouTube เพื่อให้ AI ดึงข้อมูลอัตโนมัติ..." class="w-full pl-14 pr-5 py-4 rounded-2xl outline-none">
                 </div>
-                <button onclick="fetchAiData()" id="aiBtn" class="w-full md:w-auto bg-sky-600 hover:bg-sky-500 px-10 py-4 rounded-2xl font-bold transition flex items-center justify-center gap-2">
+                <button onclick="fetchAiData()" id="aiBtn" class="w-full md:w-auto bg-red-600 hover:bg-red-500 px-10 py-4 rounded-2xl font-bold transition flex items-center justify-center gap-2">
                     <i class="fa-solid fa-robot"></i> ดึงด้วย AI
                 </button>
             </div>
@@ -231,9 +228,9 @@
                         </div>
                         <div id="uploadLoading" class="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/90">
                             <div class="w-2/3 bg-slate-800 rounded-full h-2 mb-3 overflow-hidden">
-                                <div id="uploadProgressBar" class="bg-sky-500 h-full transition-all duration-200" style="width: 0%"></div>
+                                <div id="uploadProgressBar" class="bg-red-500 h-full transition-all duration-200" style="width: 0%"></div>
                             </div>
-                            <p id="uploadProgressText" class="text-[10px] text-sky-400 font-bold tracking-widest">UPLOADING 0%</p>
+                            <p id="uploadProgressText" class="text-[10px] text-red-400 font-bold tracking-widest">UPLOADING 0%</p>
                         </div>
                     </div>
                     <div class="flex flex-col gap-2">
@@ -259,7 +256,7 @@
                         </div>
                         <div>
                             <label class="text-[10px] uppercase font-bold text-slate-500 ml-1 block">YouTube ID</label>
-                            <input type="text" id="ytId" class="w-full px-4 py-3 rounded-2xl outline-none text-sky-400" required>
+                            <input type="text" id="ytId" class="w-full px-4 py-3 rounded-2xl outline-none text-red-400" required>
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
@@ -278,7 +275,7 @@
                     </div>
                     <div class="flex justify-between items-end px-1">
                         <label class="text-[10px] uppercase font-bold text-slate-500">เรื่องย่อ & Tags</label>
-                        <button type="button" id="copyTagsBtn" onclick="copyTags()" class="text-[10px] text-sky-400 hover:text-sky-300 flex items-center gap-1 transition bg-sky-500/10 px-2 py-1 rounded-lg border border-sky-500/20 transform active:scale-95">
+                        <button type="button" id="copyTagsBtn" onclick="copyTags()" class="text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1 transition bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/20 transform active:scale-95">
                             <i class="fa-solid fa-copy"></i> คัดลอก Tags
                         </button>
                     </div>
@@ -289,7 +286,6 @@
         </div>
     </div>
 
-    <!-- Batch Import Modal -->
     <div id="batchModal" class="fixed inset-0 bg-black/95 hidden flex items-center justify-center p-4 z-[100] backdrop-blur-md">
         <div class="glass w-full max-w-2xl rounded-[3rem] p-10 my-auto relative shadow-2xl">
             <button onclick="closeBatchModal()" class="absolute top-8 right-10 text-slate-500 hover:text-white text-4xl">&times;</button>
@@ -318,7 +314,7 @@
         const storage = firebase.storage();
         const db = firebase.firestore();
 
-        // 2. ฟังก์ชัน AI และ YouTube (แจ่มๆ)
+        // 2. ฟังก์ชัน AI และ YouTube
         async function fetchAiData() {
             const aiUrl = document.getElementById('aiUrl').value;
             const aiBtn = document.getElementById('aiBtn');
@@ -328,7 +324,6 @@
             aiBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> รอแป๊บครับ...';
 
             try {
-                // ดึง ID และ รูปปก
                 const vId = extractVideoID(aiUrl);
                 if (vId) {
                     document.getElementById('ytId').value = vId;
@@ -336,7 +331,7 @@
                     updatePreview();
                 }
 
-                // เรียก AI Port 4000
+                // เรียกใช้ Relative Path เพื่อให้ทำงานได้ทั้ง Local และ Production
                 const res = await fetch('/api/ai/generate-summary', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -345,20 +340,15 @@
                 const data = await res.json();
                 
                 if (data.summary) {
-                    // รวมเรื่องย่อและ Tags เข้าด้วยกัน
                     const fullDesc = data.summary + (data.tags ? `\n\n${data.tags}` : "");
                     document.getElementById('description').value = fullDesc;
                 }
-                if (data.category) {
-                    document.getElementById('category').value = data.category;
-                }
-                if (data.rating) {
-                    document.getElementById('rating').value = data.rating;
-                }
+                if (data.category) document.getElementById('category').value = data.category;
+                if (data.rating) document.getElementById('rating').value = data.rating;
                 
                 alert("✅ ดึงข้อมูลสำเร็จ!");
             } catch (err) {
-                alert("❌ ลืมเปิด Backend Port 4000 หรือเปล่าครับ?");
+                alert("❌ ติดต่อ Backend ไม่ได้ (ถ้าทดสอบในเครื่องอย่าลืมเปิด node server.js นะครับ)");
             } finally {
                 aiBtn.disabled = false;
                 aiBtn.innerHTML = '<i class="fa-solid fa-robot"></i> ดึงด้วย AI';
@@ -367,21 +357,18 @@
 
         function copyTags() {
             const desc = document.getElementById('description').value;
-            // ดึงเฉพาะคำที่ขึ้นต้นด้วย #
             const tags = desc.match(/#[\w\u0E00-\u0E7F]+/g);
             const btn = document.getElementById('copyTagsBtn');
             
             if (tags) {
                 navigator.clipboard.writeText(tags.join(' '));
-                
-                // Animation Effect
                 const originalHtml = btn.innerHTML;
                 btn.innerHTML = '<i class="fa-solid fa-check"></i> คัดลอกแล้ว!';
                 btn.className = "text-[10px] text-green-400 flex items-center gap-1 transition bg-green-500/10 px-2 py-1 rounded-lg border border-green-500/20 transform scale-105";
                 
                 setTimeout(() => {
                     btn.innerHTML = originalHtml;
-                    btn.className = "text-[10px] text-sky-400 hover:text-sky-300 flex items-center gap-1 transition bg-sky-500/10 px-2 py-1 rounded-lg border border-sky-500/20 transform active:scale-95";
+                    btn.className = "text-[10px] text-red-400 hover:text-red-300 flex items-center gap-1 transition bg-red-500/10 px-2 py-1 rounded-lg border border-red-500/20 transform active:scale-95";
                 }, 1500);
             } else {
                 alert("ไม่พบ Tags ในช่องเรื่องย่อ");
@@ -401,7 +388,7 @@
             if (url) {
                 img.src = url;
                 img.classList.remove('hidden');
-                img.classList.add('glow-sky');
+                img.classList.add('glow-red');
                 placeholder.classList.add('hidden');
             } else {
                 img.classList.add('hidden');
@@ -410,8 +397,8 @@
         }
 
         // 3. จัดการข้อมูลซีรีส์
-        let allMovies = []; // ตัวแปรเก็บข้อมูลหนังทั้งหมด
-        let filteredMovies = []; // สำหรับค้นหาและแบ่งหน้า
+        let allMovies = []; 
+        let filteredMovies = []; 
         let currentPage = 1;
         const rowsPerPage = 10;
         let myChart = null;
@@ -419,15 +406,10 @@
         async function loadAdminData() {
             const snap = await db.collection('movies').orderBy('createdAt', 'desc').get();
             allMovies = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            filterAdmin(); // เรียกใช้ฟังก์ชันกรองข้อมูลแทน
-
+            filterAdmin(); 
             document.getElementById('statTotal').innerText = allMovies.length;
-            
-            // อัปเดตสถิติ VIP
             const vipCount = allMovies.filter(m => m.isVip).length;
             document.getElementById('statVip').innerText = vipCount;
-
             renderAdminTable();
             renderChart();
         }
@@ -450,10 +432,8 @@
                 </tr>
             `).join('');
 
-            // อัปเดตข้อมูล Pagination
             const totalPages = Math.ceil(filteredMovies.length / rowsPerPage) || 1;
             document.getElementById('pageInfo').innerText = `แสดง ${filteredMovies.length > 0 ? start + 1 : 0}-${Math.min(end, filteredMovies.length)} จาก ${filteredMovies.length} รายการ (หน้า ${currentPage}/${totalPages})`;
-            
             document.getElementById('prevBtn').disabled = currentPage === 1;
             document.getElementById('nextBtn').disabled = currentPage >= totalPages;
         }
@@ -483,8 +463,6 @@
 
         function renderChart() {
             const ctx = document.getElementById('categoryChart').getContext('2d');
-            
-            // เรียงลำดับตามยอดวิว (View Count) จากมากไปน้อย และตัดมาแค่ 10 อันดับแรก
             const topMovies = [...allMovies]
                 .sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0))
                 .slice(0, 10);
@@ -492,7 +470,7 @@
             const labels = topMovies.map(m => m.title);
             const data = topMovies.map(m => m.viewCount || 0);
 
-            if (myChart) myChart.destroy(); // ลบกราฟเก่าก่อนสร้างใหม่
+            if (myChart) myChart.destroy(); 
 
             myChart = new Chart(ctx, {
                 type: 'bar',
@@ -501,7 +479,7 @@
                     datasets: [{
                         label: 'ยอดการรับชม (ครั้ง)',
                         data: data,
-                        backgroundColor: '#0ea5e9',
+                        backgroundColor: '#dc2626',
                         borderRadius: 6,
                         barThickness: 20
                     }]
@@ -509,19 +487,11 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    indexAxis: 'y', // กราฟแนวนอน
-                    plugins: {
-                        legend: { display: false }
-                    },
+                    indexAxis: 'y', 
+                    plugins: { legend: { display: false } },
                     scales: {
-                        x: { 
-                            grid: { color: '#1e293b' },
-                            ticks: { color: '#94a3b8' }
-                        },
-                        y: { 
-                            grid: { display: false },
-                            ticks: { color: '#e2e8f0', font: { family: 'Kanit' } }
-                        }
+                        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { family: 'Kanit' } } }
                     }
                 }
             });
@@ -529,18 +499,15 @@
 
         // 4. จัดการ Users
         let allUsers = [];
-
         async function loadUsers() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-slate-500">กำลังโหลด...</td></tr>';
-
             try {
                 const snap = await db.collection('users').get();
                 allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
                 renderUsers(allUsers);
             } catch (e) {
-                console.error(e);
-                tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-red-400">โหลดข้อมูลไม่สำเร็จ (อาจยังไม่มี Collection users)</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-red-400">โหลดข้อมูลไม่สำเร็จ</td></tr>';
             }
         }
 
@@ -550,7 +517,6 @@
                 tbody.innerHTML = '<tr><td colspan="4" class="p-5 text-center text-slate-500">ไม่พบผู้ใช้งาน</td></tr>';
                 return;
             }
-            
             tbody.innerHTML = users.map(u => `
                 <tr class="hover:bg-slate-900/30 transition">
                     <td class="p-5 flex items-center gap-3">
@@ -558,11 +524,7 @@
                         <span class="font-bold text-white">${u.username || 'Unknown'}</span>
                     </td>
                     <td class="p-5 text-slate-400 text-sm">${u.email || '-'}</td>
-                    <td class="p-5">
-                        ${u.isVip 
-                            ? '<span class="bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/20">👑 VIP MEMBER</span>' 
-                            : '<span class="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-bold">FREE USER</span>'}
-                    </td>
+                    <td class="p-5">${u.isVip ? '<span class="bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold">👑 VIP MEMBER</span>' : '<span class="bg-slate-800 text-slate-400 px-3 py-1 rounded-full text-xs font-bold">FREE USER</span>'}</td>
                     <td class="p-5 text-right">
                         <button onclick="toggleVip('${u.uid}', ${u.isVip || false})" class="px-4 py-2 rounded-xl text-xs font-bold transition ${u.isVip ? 'bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white' : 'bg-green-500/10 text-green-400 hover:bg-green-500 hover:text-white'}">
                             ${u.isVip ? 'ยกเลิก VIP' : 'ตั้งเป็น VIP'}
@@ -575,9 +537,8 @@
         async function toggleVip(uid, currentStatus) {
             if(!confirm(currentStatus ? 'ต้องการยกเลิกสถานะ VIP?' : 'ต้องการตั้งค่าเป็น VIP?')) return;
             try {
-                // ใช้ set merge เพื่อสร้างเอกสารหากยังไม่มี
                 await db.collection('users').doc(uid).set({ isVip: !currentStatus }, { merge: true });
-                loadUsers(); // โหลดข้อมูลใหม่
+                loadUsers(); 
             } catch (e) { alert('Error: ' + e.message); }
         }
 
@@ -598,55 +559,39 @@
                     const data = doc.data();
                     document.getElementById('announcementText').value = data.text || '';
                     document.getElementById('announcementActive').checked = data.isActive || false;
-                } else {
-                    console.log("No announcement document found. A new one will be created on save.");
                 }
-            } catch (e) {
-                console.error("Error loading announcement:", e);
-                alert("ไม่สามารถโหลดข้อมูลประกาศได้");
-            }
+            } catch (e) { console.error(e); }
         }
 
         async function saveAnnouncement() {
             const text = document.getElementById('announcementText').value;
             const isActive = document.getElementById('announcementActive').checked;
-
             try {
                 await db.collection('announcements').doc('main').set({
-                    text: text,
-                    isActive: isActive,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    text: text, isActive: isActive, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 }, { merge: true });
                 alert("✅ บันทึกประกาศเรียบร้อยแล้ว!");
-            } catch (e) {
-                console.error("Error saving announcement:", e);
-                alert("❌ เกิดข้อผิดพลาดในการบันทึก: " + e.message);
-            }
+            } catch (e) { alert("❌ เกิดข้อผิดพลาด: " + e.message); }
         }
 
-        // 6. Navigation System
+        // 6. Navigation
         function showSection(sectionId) {
-            // Hide all
             ['movies', 'users', 'announcement'].forEach(id => {
                 document.getElementById(id + 'Section').classList.add('hidden');
                 document.getElementById('nav-' + id).classList.remove('active-nav');
                 document.getElementById('nav-' + id).classList.add('text-slate-400', 'hover:bg-slate-900');
             });
-
-            // Show selected
             document.getElementById(sectionId + 'Section').classList.remove('hidden');
             const navBtn = document.getElementById('nav-' + sectionId);
             navBtn.classList.add('active-nav');
-            navBtn.classList.remove('text-slate-400', 'hover:bg-slate-900');
-
             if (sectionId === 'users') loadUsers();
             if (sectionId === 'announcement') loadAnnouncement();
         }
 
-        // 7. Form Handling (Add/Edit/Delete)
+        // 7. Modals & Forms
         function openAddModal() {
             document.getElementById('movieForm').reset();
-            document.getElementById('movieId').value = ''; // เคลียร์ ID เพื่อบอกว่าเป็นของใหม่
+            document.getElementById('movieId').value = ''; 
             document.getElementById('posterPreview').classList.add('hidden');
             document.getElementById('posterPlaceholder').classList.remove('hidden');
             document.getElementById('viewCount').value = 0;
@@ -657,8 +602,6 @@
         function editMovie(id) {
             const movie = allMovies.find(m => m.id === id);
             if (!movie) return;
-
-            // ใส่ข้อมูลเดิมลงในฟอร์ม
             document.getElementById('movieId').value = movie.id;
             document.getElementById('title').value = movie.title;
             document.getElementById('category').value = movie.category;
@@ -668,8 +611,7 @@
             document.getElementById('posterUrl').value = movie.posterUrl;
             document.getElementById('viewCount').value = movie.viewCount || 0;
             document.getElementById('isVip').checked = movie.isVip;
-
-            updatePreview(); // โชว์รูปปก
+            updatePreview(); 
             document.getElementById('modalTitle').innerText = "แก้ไขข้อมูลซีรีส์";
             openModal();
         }
@@ -682,24 +624,19 @@
             } catch (e) { alert(e.message); }
         }
 
-        // จัดการการบันทึกฟอร์ม (รองรับทั้งเพิ่มและแก้ไข)
         document.getElementById('movieForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const id = document.getElementById('movieId').value;
-            
-            // 🛡️ ป้องกันลิงก์ YouTube พัง: ตัดเอาเฉพาะ ID เสมอ
             let rawYtId = document.getElementById('ytId').value.trim();
-            // ถ้าความยาวมากกว่า 11 ตัวอักษร น่าจะเป็น URL ให้ลองสกัด ID
             if (rawYtId.length > 11) {
                 const extracted = extractVideoID(rawYtId);
                 if (extracted) rawYtId = extracted;
             }
-            // (ถ้าสั้นกว่าหรือเท่ากับ 11 ตัวอักษร ให้ถือว่าเป็น ID อยู่แล้ว)
 
             const data = {
                 title: document.getElementById('title').value,
                 category: document.getElementById('category').value,
-                ytId: rawYtId, // ใช้ ID ที่ผ่านการกรองแล้ว
+                ytId: rawYtId,
                 rating: parseFloat(document.getElementById('rating').value) || 0,
                 viewCount: parseInt(document.getElementById('viewCount').value) || 0,
                 description: document.getElementById('description').value,
@@ -710,143 +647,38 @@
 
             try {
                 if (id) {
-                    // กรณีแก้ไข (Update)
                     await db.collection('movies').doc(id).update(data);
                     alert('✅ แก้ไขข้อมูลเรียบร้อย!');
                 } else {
-                    // กรณีเพิ่มใหม่ (Create)
                     data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
                     await db.collection('movies').add(data);
                     alert('✅ เพิ่มหนังใหม่เรียบร้อย!');
                 }
                 closeModal();
                 loadAdminData();
-            } catch (error) {
-                console.error(error);
-                alert('❌ เกิดข้อผิดพลาด: ' + error.message);
-            }
+            } catch (error) { alert('❌ เกิดข้อผิดพลาด: ' + error.message); }
         });
 
-        // 8. Backup & Restore / Batch
-        function openBatchModal() {
-            document.getElementById('batchJson').value = '';
-            document.getElementById('batchModal').classList.remove('hidden');
-        }
-
-        function closeBatchModal() {
-            document.getElementById('batchModal').classList.add('hidden');
-        }
-
-        async function handleBatchImport() {
-            const jsonText = document.getElementById('batchJson').value;
-            if (!jsonText) return alert('กรุณาวางข้อมูล JSON ก่อน');
-
-            try {
-                const moviesToImport = JSON.parse(jsonText);
-                if (!Array.isArray(moviesToImport)) {
-                    return alert('ข้อมูลต้องเป็น Array ของ Object เท่านั้น');
-                }
-
-                if (!confirm(`คุณกำลังจะนำเข้าข้อมูลใหม่จำนวน ${moviesToImport.length} เรื่อง ยืนยันหรือไม่? (ข้อมูลเก่าจะไม่ถูกลบ)`)) return;
-
-                const batch = db.batch();
-                moviesToImport.forEach(movie => {
-                    const docRef = db.collection('movies').doc(); // สร้าง ID ใหม่อัตโนมัติ
-                    const data = {
-                        title: movie.title || 'No Title',
-                        category: movie.category || 'inter',
-                        ytId: movie.ytId || '',
-                        rating: parseFloat(movie.rating) || 0,
-                        viewCount: parseInt(movie.viewCount) || 0,
-                        description: movie.description || '',
-                        posterUrl: movie.posterUrl || '',
-                        isVip: movie.isVip || false,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    batch.set(docRef, data);
-                });
-
-                await batch.commit();
-                alert(`✅ นำเข้าข้อมูล ${moviesToImport.length} เรื่องสำเร็จ!`);
-                closeBatchModal();
-                loadAdminData();
-
-            } catch (e) {
-                alert('❌ เกิดข้อผิดพลาดในการนำเข้า: ' + e.message);
-                console.error(e);
-            }
-        }
-
+        // 8. Backup & Restore
         async function backupDatabase() {
-            if (!confirm('ต้องการสำรองข้อมูลหนังทั้งหมด (Movies Collection) ใช่หรือไม่?')) return;
-
+            if (!confirm('ต้องการสำรองข้อมูลหนังทั้งหมด?')) return;
             try {
                 const snap = await db.collection('movies').orderBy('createdAt', 'desc').get();
                 const moviesData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-                // แปลง Timestamp เป็น ISO String เพื่อให้ไฟล์ JSON สมบูรณ์
                 const moviesForJson = moviesData.map(movie => {
                     const newMov = { ...movie };
                     if (newMov.createdAt && newMov.createdAt.toDate) newMov.createdAt = newMov.createdAt.toDate().toISOString();
                     if (newMov.updatedAt && newMov.updatedAt.toDate) newMov.updatedAt = newMov.updatedAt.toDate().toISOString();
                     return newMov;
                 });
-
-                const jsonString = JSON.stringify(moviesForJson, null, 2);
-                const blob = new Blob([jsonString], { type: 'application/json' });
+                const blob = new Blob([JSON.stringify(moviesForJson, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
-                const date = new Date().toISOString().slice(0, 10);
                 a.href = url;
-                a.download = `duydodee-movies-backup-${date}.json`;
-                document.body.appendChild(a);
+                a.download = `duydodee-backup-${new Date().toISOString().slice(0, 10)}.json`;
                 a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-            } catch (e) {
-                alert('❌ เกิดข้อผิดพลาดในการสำรองข้อมูล: ' + e.message);
-                console.error(e);
-            }
+            } catch (e) { alert('❌ สำรองข้อมูลไม่สำเร็จ: ' + e.message); }
         }
-
-        document.getElementById('restoreFile').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            if (!confirm('คำเตือน: การกู้คืนจะ "เขียนทับ" ข้อมูลที่มี ID ตรงกันในไฟล์. คุณแน่ใจหรือไม่ว่าจะดำเนินการต่อ?')) {
-                event.target.value = ''; return;
-            }
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                try {
-                    const moviesToRestore = JSON.parse(e.target.result);
-                    if (!Array.isArray(moviesToRestore)) return alert('ไฟล์ไม่ถูกต้อง ข้อมูลต้องเป็น Array');
-                    
-                    const batch = db.batch();
-                    moviesToRestore.forEach(movie => {
-                        if (!movie.id) return;
-                        const docRef = db.collection('movies').doc(movie.id);
-                        const dataToSet = { ...movie };
-                        delete dataToSet.id;
-                        if (dataToSet.createdAt && typeof dataToSet.createdAt === 'string') dataToSet.createdAt = firebase.firestore.Timestamp.fromDate(new Date(dataToSet.createdAt));
-                        if (dataToSet.updatedAt && typeof dataToSet.updatedAt === 'string') dataToSet.updatedAt = firebase.firestore.Timestamp.fromDate(new Date(dataToSet.updatedAt));
-                        batch.set(docRef, dataToSet);
-                    });
-
-                    await batch.commit();
-                    alert(`✅ กู้คืนข้อมูล ${moviesToRestore.length} เรื่องสำเร็จ!`);
-                    loadAdminData();
-                } catch (err) {
-                    alert('❌ เกิดข้อผิดพลาดในการอ่านไฟล์ JSON: ' + err.message);
-                } finally {
-                    event.target.value = '';
-                }
-            };
-            reader.readAsText(file);
-        });
 
         window.onload = loadAdminData;
         function openModal() { document.getElementById('movieModal').classList.remove('hidden'); }

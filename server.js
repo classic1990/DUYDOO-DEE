@@ -43,7 +43,7 @@ if (!fs.existsSync(appPath)) appPath = path.join(__dirname, "app");
 
 // --- 4. SECURITY & AUTH SETTINGS ---
 const JWT_SECRET = process.env.JWT_SECRET || 'duydodee-super-secret-key-2026';
-const OWNER_EMAIL = "duy.kan1234@gmail.com";
+const OWNER_EMAIL = "YOUR_EMAIL@gmail.com"; // 👈 เปลี่ยนเป็นอีเมลของคุณตรงนี้
 
 // 🛡️ Middleware ตรวจสอบสิทธิ์ (ฉบับแก้ไข)
 const authenticate = (req, res, next) => {

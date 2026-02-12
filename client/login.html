@@ -3,15 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <title>Login - DUYDODEE 4K</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 </head>
-<body style="background: #1a1a1a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh;">
-    <div style="text-align: center; background: #222; padding: 40px; border-radius: 10px; border-top: 5px solid #ff0000;">
-        <h2 style="color: #ff0000;">DUYDODEE 4K ADMIN</h2>
-        <p>กรุณาล็อกอินด้วย Google เพื่อจัดการระบบ</p>
-        <button onclick="window.location.href='/api/auth/google'" style="background: #ff0000; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">
-            Login with Google
+<body class="bg-slate-950 flex items-center justify-center min-h-screen text-white font-sans">
+    <div class="bg-slate-900 p-10 rounded-3xl border border-slate-800 text-center shadow-2xl max-w-sm w-full">
+        <div class="inline-flex bg-red-500/10 p-4 rounded-2xl mb-6">
+            <svg class="w-10 h-10 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+        </div>
+        <h2 class="text-2xl font-bold text-white mb-2">DUYDODEE <span class="text-red-500">ADMIN</span></h2>
+        <p class="text-slate-400 text-sm mb-8">เฉพาะผู้ดูแลระบบเท่านั้น</p>
+        
+        <button onclick="handleLogin()" class="w-full bg-white text-slate-900 font-bold py-3.5 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-100 transition shadow-lg active:scale-95">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" class="w-6 h-6">
+            เข้าสู่ระบบด้วย Google
         </button>
     </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuhTA1YwcsNyxR0NLYW6JrxUQ9U7vyVeo",
+            authDomain: "classic-e8ab7.firebaseapp.com",
+            projectId: "classic-e8ab7",
+            storageBucket: "classic-e8ab7.firebasestorage.app",
+            messagingSenderId: "596308927760",
+            appId: "1:596308927760:web:63043fd2786459082cb195",
+            measurementId: "G-RCDSPGQ5LE"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        async function handleLogin() {
+            try {
+                const result = await auth.signInWithPopup(provider);
+                const token = await result.user.getIdToken();
+                
+                const res = await fetch('/api/login-google', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+                
+                const data = await res.json();
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    alert(data.message || 'เข้าสู่ระบบไม่สำเร็จ');
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Error: ' + error.message);
+            }
+        }
+    </script>
 </body>
 </html>
