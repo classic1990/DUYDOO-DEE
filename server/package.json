@@ -10,7 +10,13 @@
     "seed:test": "node seed-test-users.js",
     "test:ai": "node test-ai.js",
     "check:keys": "node check-keys.js",
-    "test:rotation": "node test-rotation-simulation.js"
+    "test:rotation": "node test-rotation-simulation.js",
+    "backup:users": "node backup-users-csv.js",
+    "backup:movies": "node backup-movies-csv.js",
+    "import:movies": "node import-movies-csv.js",
+    "undo:import": "node undo-import-movies.js",
+    "check:duplicates": "node check-duplicate-movies.js",
+    "remove:duplicates": "node remove-duplicate-movies.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +33,7 @@
     "express-rate-limit": "^8.2.1",
     "firebase-admin": "^13.6.1",
     "jsonwebtoken": "^9.0.3",
-    "nodemailer": "^8.0.1"
+    "nodemailer": "^8.0.1",
+    "node-cron": "^3.0.3"
   }
 }

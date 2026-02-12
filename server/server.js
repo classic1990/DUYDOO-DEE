@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const path = require("path");
+const fs = require("fs");
 
 // 1. เชื่อมต่อ Firebase (ใช้ชื่อไฟล์ตามในรูปโปรเจคของคุณ)
 // --- แก้ไขส่วนนี้เพื่อให้ใช้กุญแจจาก Environment Variables ของ Vercel ---
@@ -44,6 +45,7 @@ const axios = require('axios');
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
+const cron = require('node-cron');
 
 const app = express();
 
@@ -605,6 +607,34 @@ apiRouter.get('/cron/backup-email', async (req, res) => {
     } catch (err) {
         console.error('❌ Backup Error:', err);
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// [LOCAL CRON JOB: Daily Backup to Folder]
+// ทำงานทุกวัน เวลา 00:00 น. (สำหรับรันบนเครื่อง Local หรือ VPS)
+cron.schedule('0 0 * * *', async () => {
+    console.log('📦 Running Daily Local Backup...');
+    try {
+        const backupDir = path.join(__dirname, 'backups');
+        if (!fs.existsSync(backupDir)) {
+            fs.mkdirSync(backupDir, { recursive: true });
+        }
+
+        const collections = ['users', 'series', 'settings'];
+        const backupData = { timestamp: new Date().toISOString() };
+
+        for (const colName of collections) {
+            const snapshot = await db.collection(colName).get();
+            backupData[colName] = snapshot.docs.map(doc => ({ _id: doc.id, ...doc.data() }));
+        }
+
+        const dateStr = new Date().toISOString().split('T')[0];
+        const filePath = path.join(backupDir, `backup-${dateStr}.json`);
+        
+        fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2));
+        console.log(`✅ Backup saved to: ${filePath}`);
+    } catch (err) {
+        console.error('❌ Local Backup Failed:', err);
     }
 });
 
