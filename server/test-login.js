@@ -10,7 +10,7 @@ async function runTests() {
     // ข้อมูลนี้มาจากไฟล์ server/seed.js
     const adminUser = {
         username: 'duy.kan1234@gmail.com',
-        password: '12345678'
+        password: 'Classic1996'
     };
 
     console.log(`[Test 1] ทดสอบ Login ด้วยบัญชี: ${adminUser.username}`);
@@ -32,7 +32,8 @@ async function runTests() {
                 console.log('   💡 สาเหตุ: ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง (ลองรัน node seed.js อีกครั้ง)');
             }
         } else {
-            console.log(`   Error: ${error.message}`);
+            console.log(`   Error Code: ${error.code || 'N/A'}`);
+            console.log(`   Error Message: ${error.message}`);
             console.log('   💡 สาเหตุ: ไม่สามารถเชื่อมต่อ Server ได้ (ตรวจสอบว่า npm start รันอยู่หรือไม่)');
         }
     }
@@ -50,8 +51,10 @@ async function runTests() {
     } catch (error) {
         if (error.response && error.response.status === 401) {
             console.log('✅ PASS: ระบบปฏิเสธการเข้าสู่ระบบถูกต้อง (401 Unauthorized)');
+        } else if (error.response) {
+            console.log(`❌ FAIL: ได้รับ Status Code ที่ไม่คาดหวัง: ${error.response.status}`);
         } else {
-            console.log(`❌ FAIL: ได้รับ Status Code ที่ไม่คาดหวัง: ${error.response ? error.response.status : error.message}`);
+            console.log(`❌ FAIL: ไม่สามารถเชื่อมต่อ Server ได้ (${error.message})`);
         }
     }
 }

@@ -80,9 +80,11 @@ const authenticateToken = (req, res, next) => {
 };
 
 const authorizeAdmin = (req, res, next) => {
-    const adminUser = process.env.ADMIN_USERNAME ? process.env.ADMIN_USERNAME.toLowerCase() : null;
+    // กำหนดให้เมลนี้เป็นแอดมินคนเดียวที่มีสิทธิ์แก้ไขข้อมูล
+    const allowedAdmin = 'duy.kan1234@gmail.com';
+
     if (req.user && req.user.role === 'admin') {
-        if (adminUser && req.user.user.toLowerCase() !== adminUser) {
+        if (req.user.user.toLowerCase() !== allowedAdmin.toLowerCase()) {
             return res.status(403).json({ success: false, message: 'Access Denied: คุณไม่ใช่เจ้าของระบบตัวจริง' });
         }
         return next();
@@ -120,8 +122,9 @@ apiRouter.post('/login', async (req, res) => {
         if (!isMatch) return res.status(401).json({ success: false, message: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' });
 
         let finalRole = userData.role;
-        const adminUserEnv = process.env.ADMIN_USERNAME?.toLowerCase();
-        if (finalRole === 'admin' && adminUserEnv && userData.username !== adminUserEnv) {
+        // บังคับให้เฉพาะเมลนี้เท่านั้นที่เป็น Admin ได้ (คนอื่นแม้ใน DB เป็น admin ก็จะถูกลดสิทธิ์ตอน Login)
+        const superAdminEmail = 'duy.kan1234@gmail.com';
+        if (finalRole === 'admin' && userData.username.toLowerCase() !== superAdminEmail.toLowerCase()) {
             finalRole = 'user';
         }
 
@@ -143,7 +146,13 @@ apiRouter.post('/login', async (req, res) => {
         // ส่ง Refresh Token ผ่าน HttpOnly Cookie
         res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: true, sameSite: 'Strict' });
 
-        res.json({ success: true, accessToken: token, role: finalRole });
+        res.json({ 
+            success: true, 
+            accessToken: token, 
+            role: finalRole,
+            username: userData.username,
+            vipExpiresAt: userData.vipExpiresAt ? userData.vipExpiresAt.toDate() : null
+        });
     } catch (error) {
         console.error("❌ Login Error:", error); // เพิ่มบรรทัดนี้เพื่อให้เห็น Error ใน Vercel Logs
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์' });
@@ -176,9 +185,20 @@ apiRouter.post('/refresh-token', async (req, res) => {
         // 4. สร้าง Token ชุดใหม่
         const userDoc = await db.collection('users').doc(userId).get();
         const userData = userDoc.data();
+
+        let currentRole = userData.role;
+        // [VIP CHECK] ตรวจสอบวันหมดอายุตอน Refresh
+        if (currentRole === 'vip' && userData.vipExpiresAt) {
+            const now = new Date();
+            const expiresAt = userData.vipExpiresAt.toDate();
+            if (now > expiresAt) {
+                currentRole = 'user';
+                await db.collection('users').doc(userId).update({ role: 'user' });
+            }
+        }
         
         const newAccessToken = jwt.sign(
-            { id: userId, user: userData.username, role: userData.role }, 
+            { id: userId, user: userData.username, role: currentRole }, 
             process.env.JWT_SECRET, 
             { expiresIn: '15m' }
         );
@@ -279,6 +299,54 @@ apiRouter.delete('/movies/:id', authenticateToken, authorizeAdmin, async (req, r
     try {
         await db.collection('series').doc(req.params.id).delete();
         res.json({ success: true, message: 'ลบสำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+// [USER MANAGEMENT] - เพิ่มส่วนนี้เพื่อให้แอดมินจัดการสมาชิกได้
+apiRouter.get('/users', authenticateToken, authorizeAdmin, async (req, res) => {
+    try {
+        const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get();
+        const users = snapshot.docs.map(doc => {
+            const data = doc.data();
+            delete data.password; // ปิดบังรหัสผ่าน
+            return { _id: doc.id, ...data };
+        });
+        res.json({ success: true, data: users });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+apiRouter.put('/users/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+    try {
+        const { role } = req.body;
+        
+        // ป้องกันการแก้ไขตัวเอง (Super Admin)
+        if (req.params.id === req.user.id) {
+             return res.status(400).json({ success: false, message: 'ไม่สามารถแก้ไขสิทธิ์ของตัวเองได้' });
+        }
+
+        // ป้องกันการตั้งคนอื่นเป็น Admin (ตามที่คุณขอ: ให้มีเจ้าของคนเดียว)
+        if (role === 'admin') {
+             return res.status(400).json({ success: false, message: 'ระบบจำกัดให้มี Admin เพียงคนเดียว (เจ้าของ)' });
+        }
+
+        await db.collection('users').doc(req.params.id).update({ role });
+        res.json({ success: true, message: 'อัปเดตสิทธิ์สำเร็จ' });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
+apiRouter.delete('/users/:id', authenticateToken, authorizeAdmin, async (req, res) => {
+    try {
+        if (req.params.id === req.user.id) {
+            return res.status(400).json({ success: false, message: 'ไม่สามารถลบตัวเองได้' });
+        }
+        await db.collection('users').doc(req.params.id).delete();
+        res.json({ success: true, message: 'ลบผู้ใช้งานสำเร็จ' });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }

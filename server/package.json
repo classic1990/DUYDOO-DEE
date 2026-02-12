@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
-    "test": "node test-login.js"
+    "test": "node test-login.js",
+    "seed:test": "node seed-test-users.js"
   },
   "keywords": [],
   "author": "",

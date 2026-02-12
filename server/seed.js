@@ -19,7 +19,7 @@ const seedAdminUser = async () => {
         console.log("⏳ กำลังเริ่มสร้างบัญชี Admin ใน Firebase...");
         
         const adminEmail = "duy.kan1234@gmail.com"; // เมลของคุณ
-        const adminPassword = process.env.ADMIN_PASSWORD || "12345678"; // รหัสผ่าน (แนะนำให้ตั้งใน .env)
+        const adminPassword = "Classic1996"; // <-- แก้รหัสผ่านตรงนี้ได้เลยครับ
 
         const userRef = db.collection('users');
         const snapshot = await userRef.where('username', '==', adminEmail).get();

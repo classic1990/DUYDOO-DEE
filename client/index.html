@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DUYDODEE 4K - ดูซีรีส์จีนพากย์ไทย พรีเมียม</title>
     <link href="assets/css/style.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #e2e8f0; }
@@ -284,10 +284,19 @@
             if (username) {
                 const isVip = role === 'vip' || status === 'VIP';
                 const vipBadge = isVip ? '<i class="fa-solid fa-crown text-yellow-400 ml-1 text-xs drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]"></i>' : '';
+                
+                let subText = '';
+                if (isVip) {
+                    const exp = localStorage.getItem('vipExpiresAt') || sessionStorage.getItem('vipExpiresAt');
+                    if (exp) {
+                        const daysLeft = Math.ceil((new Date(exp) - new Date()) / (1000 * 60 * 60 * 24));
+                        subText = `<div class="text-[10px] text-yellow-500/80 text-right">เหลือ ${daysLeft} วัน</div>`;
+                    }
+                }
 
                 document.getElementById('authSection').innerHTML = `
                     <div class="flex items-center gap-3">
-                        <div class="text-right hidden sm:block leading-tight"><div class="text-[10px] text-slate-400">สวัสดี</div><div class="text-sm font-bold text-sky-400">${username} ${vipBadge}</div></div>
+                        <div class="text-right hidden sm:block leading-tight"><div class="text-[10px] text-slate-400">สวัสดี</div><div class="text-sm font-bold text-sky-400">${username} ${vipBadge}</div>${subText}</div>
                         <span class="text-[10px] px-2 py-0.5 rounded ${role === 'admin' ? 'bg-red-500/20 text-red-400' : (isVip ? 'bg-yellow-500/20 text-yellow-400' : 'bg-slate-700 text-slate-400')} font-bold uppercase">${role === 'admin' ? 'ADMIN' : (isVip ? 'VIP' : 'MEMBER')}</span>
                         <button onclick="logout()" class="bg-slate-800 hover:bg-red-900/30 text-slate-400 hover:text-red-400 w-8 h-8 rounded-full transition flex items-center justify-center" title="ออกจากระบบ"><i class="fa-solid fa-power-off text-xs"></i></button>
                     </div>`;
@@ -304,6 +313,7 @@
                 localStorage.setItem('userRole', d.role);
                 localStorage.setItem('username', d.username || document.getElementById('u').value);
                 if(d.role === 'vip' || d.username === 'vipuser') localStorage.setItem('userStatus', 'VIP'); // ตัวอย่างการเซต VIP
+                if(d.vipExpiresAt) localStorage.setItem('vipExpiresAt', d.vipExpiresAt);
                 location.reload();
             } else { alert('ล็อกอินไม่สำเร็จ'); }
         }
