@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ - DUYDODEE 4K Admin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="assets/css/style.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -91,7 +91,15 @@ const API_URL = '/api';
                     body: JSON.stringify({ username, password })
                 });
                 
-                const data = await res.json();
+                // อ่าน Response เป็น Text ก่อน เพื่อกัน Error กรณี Server ตอบกลับมาไม่ใช่ JSON (เช่น 500 Error Page)
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Server Response:', text);
+                    throw new Error(`Server Error (${res.status}): ระบบหลังบ้านขัดข้อง กรุณาตรวจสอบ Logs`);
+                }
 
                 if (data.success) {
                     const storage = rememberMe ? localStorage : sessionStorage;

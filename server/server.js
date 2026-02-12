@@ -136,6 +136,7 @@ apiRouter.post('/login', async (req, res) => {
 
         res.json({ success: true, accessToken: token, role: finalRole });
     } catch (error) {
+        console.error("❌ Login Error:", error); // เพิ่มบรรทัดนี้เพื่อให้เห็น Error ใน Vercel Logs
         res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในเซิร์ฟเวอร์' });
     }
 });
@@ -227,6 +228,7 @@ apiRouter.post('/register', async (req, res) => {
 
         res.status(201).json({ success: true, message: 'ลงทะเบียนสำเร็จ' });
     } catch (error) {
+        console.error("❌ Register Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 });

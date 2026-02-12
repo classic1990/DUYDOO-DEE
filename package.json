@@ -2,7 +2,9 @@
   "name": "duydoo-dee-root",
   "version": "1.0.0",
   "scripts": {
-    "deploy": "npx vercel --prod"
+    "build": "tailwindcss -i ./client/assets/css/input.css -o ./client/assets/css/style.css --minify",
+    "watch": "tailwindcss -i ./client/assets/css/input.css -o ./client/assets/css/style.css --watch",
+    "deploy": "npm run build && npx vercel --prod"
   },
   "dependencies": {
     "@google/generative-ai": "^0.1.0",
@@ -14,5 +16,8 @@
     "express-rate-limit": "^7.1.1",
     "firebase-admin": "^11.11.1",
     "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.1"
   }
 }
