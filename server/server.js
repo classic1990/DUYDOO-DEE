@@ -11,17 +11,26 @@ try {
 } catch (error) {
     // ถ้าไม่มี Environment Variable (เช่น รันในเครื่องตัวเอง) ให้ถอยไปใช้ไฟล์ JSON
     console.log("⚠️ ไม่พบ Environment Variable, กำลังพยายามใช้ไฟล์ Local JSON...");
-    serviceAccount = require("./classic-e8ab7-firebase-adminsdk-fbsvc-8c07b33104.json");
+    try {
+        serviceAccount = require("./classic-e8ab7-firebase-adminsdk-fbsvc-8c07b33104.json");
+    } catch (e) {
+        console.error("❌ CRITICAL ERROR: ไม่พบไฟล์กุญแจ Firebase และไม่มี Environment Variable");
+        serviceAccount = null;
+    }
 }
 
 if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+    if (serviceAccount) {
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } else {
+        console.warn("⚠️ Firebase ไม่ได้ถูก Initialize (ระบบฐานข้อมูลจะใช้งานไม่ได้)");
+    }
 }
 // -------------------------------------------------------------------
 
-const db = admin.firestore();
+const db = serviceAccount ? admin.firestore() : { collection: () => ({ where: () => ({ get: () => ({ empty: true }) }), add: () => {}, doc: () => ({ get: () => ({ exists: false }), set: () => {}, update: () => {}, delete: () => {} }) }) }; // Mock DB เพื่อกัน Crash
 console.log("🔥 Firebase Admin SDK: ระบบพร้อมทำงานแล้ว!");
 
 const express = require('express');

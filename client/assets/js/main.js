@@ -1,5 +1,7 @@
 // CONFIG
-const API_URL = '/api';
+const API_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:5000/api'
+    : '/api';
 let allMovies = [];
 let allUsers = [];
 let batchTempData = []; // เก็บข้อมูลชั่วคราวสำหรับ Batch Import
