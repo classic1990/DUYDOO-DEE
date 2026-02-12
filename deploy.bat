@@ -1,4 +1,4 @@
 @echo off
 echo 🚀 Deploying to Vercel...
-call npx vercel --prod
+call npm run deploy
 pause

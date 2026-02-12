@@ -7,7 +7,10 @@
     "dev": "node --watch server.js",
     "start": "node server.js",
     "test": "node test-login.js",
-    "seed:test": "node seed-test-users.js"
+    "seed:test": "node seed-test-users.js",
+    "test:ai": "node test-ai.js",
+    "check:keys": "node check-keys.js",
+    "test:rotation": "node test-rotation-simulation.js"
   },
   "keywords": [],
   "author": "",

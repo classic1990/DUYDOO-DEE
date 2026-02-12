@@ -64,7 +64,67 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// --- AI CONFIGURATION (Key Rotation System) ---
+// อ่าน Key ทั้งหมดจาก .env (คั่นด้วย comma) หรือใช้ Key เดียวถ้ามีแค่อันเดียว
+const apiKeys = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "").split(',').map(k => k.trim()).filter(k => k);
+let currentKeyIndex = 0;
+
+console.log(`🤖 AI System Loaded: ${apiKeys.length} API Keys available.`);
+
+async function generateWithRotation(prompt) {
+    if (apiKeys.length === 0) throw new Error("ไม่พบ API Key ของ Gemini (กรุณาตั้งค่า GEMINI_API_KEYS)");
+
+    let attempts = 0;
+    // ลองวนจนครบทุกคีย์ที่มี (ป้องกัน Infinite Loop)
+    while (attempts < apiKeys.length) {
+        try {
+            const apiKey = apiKeys[currentKeyIndex];
+            const genAI = new GoogleGenerativeAI(apiKey);
+            
+            // 1. ลองใช้ gemini-1.5-flash ก่อน (เร็วและถูก)
+            try {
+                const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                console.log(`🤖 AI Request: Using 'gemini-1.5-flash' (Key Index: ${currentKeyIndex})...`);
+                return await model.generateContent(prompt);
+            } catch (modelError) {
+                // ถ้าเป็น Error 429 (Quota) หรือ 403 (Permission) ให้ throw ไป catch ด้านล่างเพื่อเปลี่ยน Key
+                if (modelError.message.includes("429") || modelError.message.toLowerCase().includes("quota") || modelError.message.includes("403")) {
+                    throw modelError;
+                }
+                // ถ้าไม่ใช่ Quota (เช่น Model หาไม่เจอ) ให้ลอง Fallback ไป gemini-pro (ใช้ Key เดิม)
+                console.warn(`⚠️ Model Error, switching to 'gemini-pro'...`);
+                const modelPro = genAI.getGenerativeModel({ model: "gemini-pro" });
+                return await modelPro.generateContent(prompt);
+            }
+
+        } catch (error) {
+            // จับ Error ระดับ Key (Quota Exceeded / Permission Denied)
+            if (error.message.includes("429") || error.message.toLowerCase().includes("quota") || error.message.includes("403")) {
+                console.warn(`⚠️ Key [${currentKeyIndex}] ใช้งานไม่ได้/โควต้าเต็ม! กำลังสลับ Key ถัดไป...`);
+                currentKeyIndex = (currentKeyIndex + 1) % apiKeys.length; // วนไป Key ถัดไป
+                attempts++;
+            } else {
+                // Error อื่นๆ ที่เปลี่ยน Key ก็ไม่หาย (เช่น Prompt ผิด)
+                throw error;
+            }
+        }
+    }
+
+    // ถ้าวนลูปครบแล้วยังไม่ได้ผล (Key พังหมด)
+    const message = `🚨 CRITICAL: ระบบ AI ล่ม! ทุก API Key ของ Gemini โควต้าเต็มหรือใช้งานไม่ได้ กรุณาเพิ่ม Key ใหม่ทันที`;
+    console.error(message);
+    
+    if (process.env.LINE_NOTIFY_TOKEN) {
+        try {
+            await axios.post('https://notify-api.line.me/api/notify', 
+                new URLSearchParams({ message }), 
+                { headers: { 'Authorization': `Bearer ${process.env.LINE_NOTIFY_TOKEN}` } }
+            );
+        } catch (e) { console.error("Line Notify Error:", e.message); }
+    }
+
+    throw new Error("ทุก API Key โควต้าเต็มหรือใช้งานไม่ได้ กรุณาลองใหม่ภายหลัง");
+}
 
 // --- 3. AUTHENTICATION MIDDLEWARE ---
 const authenticateToken = (req, res, next) => {
@@ -359,10 +419,10 @@ apiRouter.post('/fetch-movie-data', authenticateToken, authorizeAdmin, async (re
         const infoRes = await axios.get(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`);
         const videoTitle = infoRes.data.title;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
         const prompt = `วิเคราะห์ชื่อคลิป YouTube: "${videoTitle}" สรุปเป็น JSON (ห้ามมี Markdown): { "title": "ชื่อเรื่อง", "year": ปี, "rating": คะแนน, "description": "เรื่องย่อ", "actors": "นักแสดง", "lessons": "ข้อคิด", "category": "china/inter/anime" }`;
 
-        const result = await model.generateContent(prompt);
+        // เรียกใช้ฟังก์ชัน Rotation แทนโค้ดเดิม
+        const result = await generateWithRotation(prompt);
         let text = result.response.text().replace(/```json|```/g, "").trim();
         const aiData = JSON.parse(text);
 
