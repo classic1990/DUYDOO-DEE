@@ -16,8 +16,17 @@
       "dest": "/client/assets/$1"
     },
     {
+      "src": "/login.html",
+      "dest": "/client/login.html"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/client/admin.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/server.js"
+      "dest": "/client/index.html",
+      "check": true
     }
   ]
 }
