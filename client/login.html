@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,18 +9,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Kanit', sans-serif; background-color: #020617; color: #e2e8f0; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        input { background: #0f172a !important; border: 1px solid #1e293b !important; color: white !important; }
-        input:focus { border-color: #0ea5e9 !important; ring: 2px #0ea5e9; }
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #020617;
+            color: #e2e8f0;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        input {
+            background: #0f172a !important;
+            border: 1px solid #1e293b !important;
+            color: white !important;
+        }
+
+        input:focus {
+            border-color: #0ea5e9 !important;
+            ring: 2px #0ea5e9;
+        }
     </style>
 </head>
+
 <body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
 
     <!-- Background Effects -->
     <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
         <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-sky-500/20 rounded-full blur-[120px]"></div>
-        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/20 rounded-full blur-[120px]">
+        </div>
     </div>
 
     <div class="glass w-full max-w-md p-8 rounded-3xl shadow-2xl border-t border-white/10">
@@ -35,42 +56,56 @@
                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Username</label>
                 <div class="relative">
                     <i class="fa-solid fa-user absolute left-4 top-3.5 text-slate-500"></i>
-                    <input type="text" id="username" class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500" placeholder="ชื่อผู้ใช้งาน" required>
+                    <input type="text" id="username"
+                        class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500"
+                        placeholder="ชื่อผู้ใช้งาน" required>
                 </div>
             </div>
-            
+
             <div>
                 <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Password</label>
                 <div class="relative">
                     <i class="fa-solid fa-lock absolute left-4 top-3.5 text-slate-500"></i>
-                    <input type="password" id="password" class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500" placeholder="รหัสผ่าน" required>
+                    <input type="password" id="password"
+                        class="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition focus:border-sky-500"
+                        placeholder="รหัสผ่าน" required>
                 </div>
             </div>
 
             <div class="flex items-center justify-between">
                 <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" id="rememberMe" class="w-4 h-4 accent-sky-500 rounded bg-slate-900 border-slate-700">
+                    <input type="checkbox" id="rememberMe"
+                        class="w-4 h-4 accent-sky-500 rounded bg-slate-900 border-slate-700">
                     <span class="text-slate-400 text-xs">จำฉันไว้ในระบบ (Remember Me)</span>
                 </label>
             </div>
 
-            <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-sky-900/20 flex items-center justify-center gap-2 group">
+            <button type="submit"
+                class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-sky-900/20 flex items-center justify-center gap-2 group">
                 <span>เข้าสู่ระบบ</span>
                 <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition"></i>
             </button>
         </form>
-        
+
         <div class="mt-6 text-center">
-            <a href="index.html" class="text-slate-500 hover:text-sky-400 text-sm transition"><i class="fa-solid fa-house mr-1"></i> กลับไปหน้าเว็บไซต์หลัก</a>
+            <a href="index.html" class="text-slate-500 hover:text-sky-400 text-sm transition"><i
+                    class="fa-solid fa-house mr-1"></i> กลับไปหน้าเว็บไซต์หลัก</a>
         </div>
     </div>
 
     <script>
-const API_URL = '/api';
+        const API_URL = '/api';
 
         // ถ้ามี Token อยู่แล้ว ให้ไปหน้า Admin เลย
-        if(localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken')) {
-            window.location.href = 'admin.html';
+        const token = localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
+        const role = localStorage.getItem('userRole') || sessionStorage.getItem('userRole');
+        if (token) {
+            if (role === 'admin') {
+                window.location.href = 'admin.html';
+            } else {
+                // Redirect non-admins to the main page instead of admin page
+                window.location.href = 'index.html';
+            }
         }
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -90,7 +125,7 @@ const API_URL = '/api';
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
+
                 // อ่าน Response เป็น Text ก่อน เพื่อกัน Error กรณี Server ตอบกลับมาไม่ใช่ JSON (เช่น 500 Error Page)
                 const text = await res.text();
                 let data;
@@ -103,12 +138,12 @@ const API_URL = '/api';
 
                 if (data.success) {
                     const storage = rememberMe ? localStorage : sessionStorage;
-                    
+
                     storage.setItem('accessToken', data.accessToken);
                     storage.setItem('userRole', data.role);
                     storage.setItem('username', data.username || username);
                     storage.setItem('userStatus', data.role === 'vip' ? 'VIP' : 'MEMBER');
-                    
+
                     // ถ้าเป็น Admin ให้ไปหน้า Admin, ถ้าไม่ใช่ให้ไปหน้าแรก
                     if (data.role === 'admin') {
                         window.location.href = 'admin.html';
@@ -129,4 +164,5 @@ const API_URL = '/api';
         });
     </script>
 </body>
+
 </html>

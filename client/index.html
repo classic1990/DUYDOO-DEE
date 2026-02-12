@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,37 +9,101 @@
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { font-family: 'Kanit', sans-serif; background-color: #0f172a; color: #e2e8f0; }
-        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.05); }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
-        .animate-fade-in { animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .vip-badge { background: linear-gradient(to right, #eab308, #ca8a04); color: #000; font-weight: 900; }
-        
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .vip-badge {
+            background: linear-gradient(to right, #eab308, #ca8a04);
+            color: #000;
+            font-weight: 900;
+        }
+
         /* Marquee Animation */
-        .marquee-container { overflow: hidden; white-space: nowrap; position: relative; }
-        .marquee-content { display: inline-block; padding-left: 100%; animation: marquee 20s linear infinite; }
-        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+        .marquee-container {
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .marquee-content {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 20s linear infinite;
+        }
+
+        @keyframes marquee {
+            0% {
+                transform: translate(0, 0);
+            }
+
+            100% {
+                transform: translate(-100%, 0);
+            }
+        }
     </style>
 </head>
+
 <body class="custom-scrollbar min-h-screen flex flex-col">
+
+    <!-- Background Effects -->
+    <div class="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-sky-500/10 rounded-full blur-[120px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 rounded-full blur-[120px]">
+        </div>
+    </div>
 
     <!-- Announcement Bar -->
     <div id="announcementBar" class="text-white text-sm py-2 hidden relative z-[60]">
         <div class="container mx-auto px-4 flex items-center">
-            <div id="announcementBadge" class="px-2 py-0.5 rounded text-xs font-bold mr-3 uppercase tracking-wider shrink-0">ประกาศ</div>
+            <div id="announcementBadge"
+                class="px-2 py-0.5 rounded text-xs font-bold mr-3 uppercase tracking-wider shrink-0">ประกาศ</div>
             <div class="marquee-container w-full">
                 <div id="announcementText" class="marquee-content font-medium"></div>
             </div>
-            <button onclick="document.getElementById('announcementBar').remove()" class="ml-4 hover:text-slate-200 shrink-0"><i class="fa-solid fa-times"></i></button>
+            <button onclick="document.getElementById('announcementBar').remove()"
+                class="ml-4 hover:text-slate-200 shrink-0"><i class="fa-solid fa-times"></i></button>
         </div>
     </div>
 
     <header class="sticky top-0 z-50 glass-panel">
         <div class="container mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-8">
-                <a href="#" onclick="filterCategory('all')" class="text-2xl font-bold text-sky-500 flex items-center gap-1">
+                <a href="#" onclick="filterCategory('all')"
+                    class="text-2xl font-bold text-sky-500 flex items-center gap-1">
                     <i class="fa-solid fa-play-circle"></i> DUYDODEE<span class="text-white">4K</span>
                 </a>
                 <nav class="hidden md:flex items-center gap-6 text-sm font-medium text-slate-300">
@@ -49,12 +114,17 @@
             </div>
             <div class="flex items-center gap-4">
                 <div class="relative hidden sm:block">
-                    <input type="text" id="searchInput" oninput="searchMovies()" placeholder="ค้นหาซีรีส์..." class="bg-slate-800/50 border border-slate-700 rounded-full py-1.5 px-4 pl-10 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sky-500 transition-all">
+                    <input type="text" id="searchInput" oninput="searchMovies()" placeholder="ค้นหาซีรีส์..."
+                        class="bg-slate-800/50 border border-slate-700 rounded-full py-1.5 px-4 pl-10 text-sm text-slate-200 outline-none focus:ring-2 focus:ring-sky-500 transition-all">
                     <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-500 text-xs"></i>
                 </div>
-                <button id="adminBtn" onclick="switchView('admin')" class="hidden text-slate-400 hover:text-white bg-slate-800/50 p-2 rounded-full transition"><i class="fa-solid fa-gear"></i></button>
+                <button id="adminBtn" onclick="switchView('admin')"
+                    class="hidden text-slate-400 hover:text-white bg-slate-800/50 p-2 rounded-full transition"><i
+                        class="fa-solid fa-gear"></i></button>
                 <div id="authSection">
-                    <button onclick="openLoginModal()" class="bg-sky-600 hover:bg-sky-500 px-5 py-1.5 rounded-full text-sm font-semibold transition">เข้าสู่ระบบ VIP</button>
+                    <button onclick="openLoginModal()"
+                        class="bg-sky-600 hover:bg-sky-500 px-5 py-1.5 rounded-full text-sm font-semibold transition">เข้าสู่ระบบ
+                        VIP</button>
                 </div>
             </div>
         </div>
@@ -66,9 +136,15 @@
                 <div>
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">เมนู</h3>
                     <div class="space-y-1">
-                        <a href="#" onclick="filterCategory('all')" class="flex items-center gap-3 px-4 py-3 bg-slate-800/50 text-sky-400 rounded-xl font-medium border-l-4 border-sky-500"><i class="fa-solid fa-house"></i> หน้าแรก</a>
-                        <a href="#" onclick="filterCategory('china')" class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i class="fa-solid fa-earth-asia"></i> ซีรีส์จีน</a>
-                        <a href="#" onclick="filterCategory('inter')" class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i class="fa-solid fa-earth-americas"></i> ฝรั่ง</a>
+                        <a href="#" onclick="filterCategory('all')"
+                            class="flex items-center gap-3 px-4 py-3 bg-slate-800/50 text-sky-400 rounded-xl font-medium border-l-4 border-sky-500"><i
+                                class="fa-solid fa-house"></i> หน้าแรก</a>
+                        <a href="#" onclick="filterCategory('china')"
+                            class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i
+                                class="fa-solid fa-earth-asia"></i> ซีรีส์จีน</a>
+                        <a href="#" onclick="filterCategory('inter')"
+                            class="flex items-center gap-3 px-4 py-2 text-slate-400 hover:text-sky-400 transition text-sm"><i
+                                class="fa-solid fa-earth-americas"></i> ฝรั่ง</a>
                     </div>
                 </div>
             </div>
@@ -77,29 +153,40 @@
         <main class="flex-1 min-w-0">
             <div id="homeView" class="animate-fade-in">
                 <div id="trendingSection" class="hidden mb-10">
-                    <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span class="w-1.5 h-6 bg-red-500 rounded-full"></span> ซีรีส์ยอดนิยม 🔥</h2>
-                    <div id="trendingGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span
+                            class="w-1.5 h-6 bg-red-500 rounded-full"></span> ซีรีส์ยอดนิยม 🔥</h2>
+                    <div id="trendingGrid"
+                        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
                 </div>
 
-                <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span class="w-1.5 h-6 bg-sky-500 rounded-full"></span> อัปเดตล่าสุด</h2>
-                <div id="movieGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
+                <h2 class="text-xl font-bold flex items-center gap-2 text-white mb-6"><span
+                        class="w-1.5 h-6 bg-sky-500 rounded-full"></span> อัปเดตล่าสุด</h2>
+                <div id="movieGrid"
+                    class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-6"></div>
             </div>
 
             <div id="playerView" class="hidden animate-fade-in">
-                <div id="playerBackdrop" class="fixed inset-0 z-[-1] opacity-20 bg-cover bg-center blur-3xl transition-all duration-700"></div>
-                <button onclick="switchView('home')" class="text-slate-400 hover:text-white flex items-center gap-2 text-sm mb-6 px-4 py-2 rounded-lg hover:bg-slate-800 transition"><i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</button>
+                <div id="playerBackdrop"
+                    class="fixed inset-0 z-[-1] opacity-20 bg-cover bg-center blur-3xl transition-all duration-700">
+                </div>
+                <button onclick="switchView('home')"
+                    class="text-slate-400 hover:text-white flex items-center gap-2 text-sm mb-6 px-4 py-2 rounded-lg hover:bg-slate-800 transition"><i
+                        class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</button>
                 <div class="bg-black rounded-2xl overflow-hidden shadow-2xl border border-slate-700 aspect-video mb-8">
                     <iframe id="mainPlayer" class="w-full h-full" src="" frameborder="0" allowfullscreen></iframe>
                 </div>
                 <div class="flex flex-col xl:flex-row gap-8 pb-10">
                     <div class="flex-1">
                         <div class="flex gap-6">
-                            <img id="playerPoster" src="" class="w-32 md:w-44 rounded-xl border border-slate-700 object-cover aspect-[2/3]">
+                            <img id="playerPoster" src=""
+                                class="w-32 md:w-44 rounded-xl border border-slate-700 object-cover aspect-[2/3]">
                             <div>
                                 <h1 id="playerTitle" class="text-2xl md:text-4xl font-bold text-white mb-3"></h1>
                                 <div class="flex gap-3 mb-4 text-xs font-medium text-slate-300">
                                     <span id="playerYear" class="bg-slate-800 px-2 py-1 rounded"></span>
-                                    <span class="text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded border border-yellow-400/20"><i class="fa-solid fa-star"></i> <span id="playerRating"></span></span>
+                                    <span
+                                        class="text-yellow-400 bg-yellow-400/10 px-2 py-1 rounded border border-yellow-400/20"><i
+                                            class="fa-solid fa-star"></i> <span id="playerRating"></span></span>
                                 </div>
                                 <div id="playerDesc" class="text-slate-400 text-sm leading-relaxed"></div>
                             </div>
@@ -107,7 +194,9 @@
                     </div>
                     <div id="episodeSelector" class="w-full xl:w-80 hidden">
                         <div class="glass-panel p-6 rounded-2xl">
-                            <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i class="fa-solid fa-list-ol text-sky-500"></i> เลือกตอน (<span id="totalEpDisplay"></span>)</h3>
+                            <h3 class="font-bold text-white mb-4 flex items-center gap-2"><i
+                                    class="fa-solid fa-list-ol text-sky-500"></i> เลือกตอน (<span
+                                    id="totalEpDisplay"></span>)</h3>
                             <div id="episodeList" class="grid grid-cols-4 gap-2"></div>
                         </div>
                     </div>
@@ -120,9 +209,13 @@
         <div class="glass-panel w-full max-w-sm p-8 rounded-2xl text-center">
             <h3 class="text-2xl font-bold text-white mb-6">VIP LOGIN</h3>
             <form id="loginForm" class="space-y-4">
-                <input type="text" id="u" placeholder="Username" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
-                <input type="password" id="p" placeholder="Password" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
-                <button class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl mt-4 transition">เข้าสู่ระบบ VIP</button>
+                <input type="text" id="u" placeholder="Username"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
+                <input type="password" id="p" placeholder="Password"
+                    class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-white outline-none">
+                <button
+                    class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl mt-4 transition">เข้าสู่ระบบ
+                    VIP</button>
             </form>
             <button onclick="closeLoginModal()" class="mt-4 text-slate-500 text-sm hover:text-white">ยกเลิก</button>
         </div>
@@ -142,15 +235,15 @@
                 const json = await res.json();
                 if (json.success) {
                     allMovies = json.data;
-                    
+
                     // Trending Logic: Top 5 rated movies
                     const trendingMovies = [...allMovies].sort((a, b) => b.rating - a.rating).slice(0, 5);
-                    
+
                     if (trendingMovies.length > 0) {
                         document.getElementById('trendingSection').classList.remove('hidden');
                         renderMovies(trendingMovies, 'trendingGrid');
                     }
-                    
+
                     renderMovies(allMovies, 'movieGrid');
                 }
             } catch (err) { console.error("API Error", err); }
@@ -185,9 +278,9 @@
         function renderMovies(movies, containerId = 'movieGrid') {
             const grid = document.getElementById(containerId);
             if (!grid) return;
-            if (!movies.length) { 
-                if (containerId === 'movieGrid') grid.innerHTML = '<div class="col-span-full py-20 text-slate-600 text-center">ไม่พบข้อมูลซีรีส์</div>'; 
-                return; 
+            if (!movies.length) {
+                if (containerId === 'movieGrid') grid.innerHTML = '<div class="col-span-full py-20 text-slate-600 text-center">ไม่พบข้อมูลซีรีส์</div>';
+                return;
             }
             grid.innerHTML = movies.map(m => `
                 <div class="group bg-slate-800 rounded-xl overflow-hidden border border-slate-700 hover:border-sky-500 transition duration-300 cursor-pointer" onclick="openPlayer('${m._id}')">
@@ -217,17 +310,19 @@
             // เลื่อนหน้าจอลงมาที่ส่วนแสดงรายการหนังอัตโนมัติ
             setTimeout(() => {
                 const section = document.getElementById('homeView');
-                if(section) {
+                if (section) {
                     const y = section.getBoundingClientRect().top + window.scrollY - 80; // -80 เพื่อเผื่อพื้นที่ Header ด้านบน
-                    window.scrollTo({top: y, behavior: 'smooth'});
+                    window.scrollTo({ top: y, behavior: 'smooth' });
                 }
             }, 100);
         }
 
         function openPlayer(id) {
             const m = allMovies.find(item => item._id === id);
+            if (!m) return console.error("Movie not found:", id);
+
             const isVipUser = localStorage.getItem('userStatus') === 'VIP' || localStorage.getItem('userRole') === 'admin';
-            
+
             if (m.isVip && !isVipUser) { alert('🔒 เนื้อหานี้สำหรับสมาชิก VIP เท่านั้น'); openLoginModal(); return; }
 
             document.getElementById('homeView').classList.add('hidden');
@@ -242,19 +337,19 @@
             const total = m.totalEpisodes || 1;
             document.getElementById('episodeSelector').classList.toggle('hidden', total <= 1);
             document.getElementById('totalEpDisplay').innerText = total;
-            
+
             let epHtml = '';
-            for(let i=1; i<=total; i++) epHtml += `<button id="ep-btn-${i}" onclick="changeEp('${m.ytId}', ${i}, ${total})" class="py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs hover:bg-sky-600 transition">${i}</button>`;
+            for (let i = 1; i <= total; i++) epHtml += `<button id="ep-btn-${i}" onclick="changeEp('${m.ytId}', ${i}, ${total})" class="py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs hover:bg-sky-600 transition">${i}</button>`;
             document.getElementById('episodeList').innerHTML = epHtml;
             changeEp(m.ytId, 1, total);
-            window.scrollTo(0,0);
+            window.scrollTo(0, 0);
         }
 
         function changeEp(id, n, t) {
             document.getElementById('mainPlayer').src = `https://www.youtube.com/embed/${id}?autoplay=1&rel=0`;
-            for(let i=1; i<=t; i++) {
+            for (let i = 1; i <= t; i++) {
                 const b = document.getElementById(`ep-btn-${i}`);
-                if(b) b.className = i===n ? "py-2 bg-sky-600 text-white rounded font-bold text-xs" : "py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs text-slate-500";
+                if (b) b.className = i === n ? "py-2 bg-sky-600 text-white rounded font-bold text-xs" : "py-2 bg-slate-800 border border-slate-700 rounded font-bold text-xs text-slate-500";
             }
         }
 
@@ -262,7 +357,7 @@
             document.getElementById('homeView').classList.add('hidden');
             document.getElementById('playerView').classList.add('hidden');
             document.getElementById(v + 'View').classList.remove('hidden');
-            if(v !== 'player') document.getElementById('mainPlayer').src = '';
+            if (v !== 'player') document.getElementById('mainPlayer').src = '';
         }
 
         function searchMovies() {
@@ -284,7 +379,7 @@
             if (username) {
                 const isVip = role === 'vip' || status === 'VIP';
                 const vipBadge = isVip ? '<i class="fa-solid fa-crown text-yellow-400 ml-1 text-xs drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]"></i>' : '';
-                
+
                 let subText = '';
                 if (isVip) {
                     const exp = localStorage.getItem('vipExpiresAt') || sessionStorage.getItem('vipExpiresAt');
@@ -306,14 +401,14 @@
 
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
-            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({username:document.getElementById('u').value, password:document.getElementById('p').value}) });
+            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: document.getElementById('u').value, password: document.getElementById('p').value }) });
             const d = await res.json();
-            if(d.success) {
+            if (d.success) {
                 localStorage.setItem('accessToken', d.accessToken);
                 localStorage.setItem('userRole', d.role);
                 localStorage.setItem('username', d.username || document.getElementById('u').value);
-                if(d.role === 'vip' || d.username === 'vipuser') localStorage.setItem('userStatus', 'VIP'); // ตัวอย่างการเซต VIP
-                if(d.vipExpiresAt) localStorage.setItem('vipExpiresAt', d.vipExpiresAt);
+                if (d.role === 'vip' || d.username === 'vipuser') localStorage.setItem('userStatus', 'VIP'); // ตัวอย่างการเซต VIP
+                if (d.vipExpiresAt) localStorage.setItem('vipExpiresAt', d.vipExpiresAt);
                 location.reload();
             } else { alert('ล็อกอินไม่สำเร็จ'); }
         }
@@ -323,4 +418,5 @@
         function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
     </script>
 </body>
+
 </html>
